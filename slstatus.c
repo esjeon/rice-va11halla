@@ -501,7 +501,10 @@ vol_perc(const char *card)
 	snd_mixer_selem_id_free(s_elem);
 	snd_mixer_close(handle);
 
-	return smprintf("%d%%", ((uint_fast16_t)(vol * 100) / max));
+	if (max == 0)
+		return smprintf("%d%%", 0);
+	else
+		return smprintf("%d%%", ((uint_fast16_t)(vol * 100) / max));
 }
 
 static char *
