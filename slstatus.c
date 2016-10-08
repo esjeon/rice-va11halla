@@ -271,14 +271,10 @@ hostname(void)
 	char buf[HOST_NAME_MAX];
 	FILE *fp;
 
-	fp = fopen("/proc/sys/kernel/hostname", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/sys/kernel/hostname");
+	if (gethostname(buf, sizeof(buf)) == -1) {
+		warn(1, "hostname");
 		return smprintf(UNKNOWN_STR);
 	}
-	fgets(buf, sizeof(buf), fp);
-	buf[strlen(buf)-1] = '\0';
-	fclose(fp);
 
 	return smprintf("%s", buf);
 }
