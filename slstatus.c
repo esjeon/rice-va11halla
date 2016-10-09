@@ -271,14 +271,10 @@ hostname(void)
 	char buf[HOST_NAME_MAX];
 	FILE *fp;
 
-	fp = fopen("/proc/sys/kernel/hostname", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/sys/kernel/hostname");
+	if (gethostname(buf, sizeof(buf)) == -1) {
+		warn(1, "hostname");
 		return smprintf(UNKNOWN_STR);
 	}
-	fgets(buf, sizeof(buf), fp);
-	buf[strlen(buf)-1] = '\0';
-	fclose(fp);
 
 	return smprintf("%s", buf);
 }
@@ -501,7 +497,10 @@ vol_perc(const char *card)
 	snd_mixer_selem_id_free(s_elem);
 	snd_mixer_close(handle);
 
-	return smprintf("%d%%", ((uint_fast16_t)(vol * 100) / max));
+	if (max == 0)
+		return smprintf("%d%%", 0);
+	else
+		return smprintf("%d%%", ((uint_fast16_t)(vol * 100) / max));
 }
 
 static char *
