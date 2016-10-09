@@ -269,10 +269,9 @@ static char *
 hostname(void)
 {
 	char buf[HOST_NAME_MAX];
-	FILE *fp;
 
 	if (gethostname(buf, sizeof(buf)) == -1) {
-		warn(1, "hostname");
+		warn("hostname");
 		return smprintf(UNKNOWN_STR);
 	}
 
@@ -498,9 +497,9 @@ vol_perc(const char *card)
 	snd_mixer_close(handle);
 
 	if (max == 0)
-		return smprintf("%d%%", 0);
+		return smprintf("0%%");
 	else
-		return smprintf("%d%%", ((uint_fast16_t)(vol * 100) / max));
+		return smprintf("%lu%%", ((uint_fast16_t)(vol * 100) / max));
 }
 
 static char *
