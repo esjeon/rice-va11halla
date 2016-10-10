@@ -621,8 +621,8 @@ main(int argc, char *argv[])
 	if (dflag && oflag) {
 		usage();
 	}
-	if (dflag) {
-		(void)daemon(1, 1);
+	if (dflag && daemon(1, 1) < 0) {
+		err(1, "daemon");
 	}
 
 	memset(&act, 0, sizeof(act));
