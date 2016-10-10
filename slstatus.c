@@ -407,8 +407,8 @@ run_command(const char *cmd)
 		warn("Failed to get command output for %s", cmd);
 		return smprintf(UNKNOWN_STR);
 	}
-	fgets(buf, sizeof(buf), fp);
-	buf[sizeof(buf)-1] = '\0';
+	fgets(buf, sizeof(buf)-1, fp);
+	buf[strlen(buf)-1] = '\0';
 	pclose(fp);
 
 	return smprintf("%s", buf);
