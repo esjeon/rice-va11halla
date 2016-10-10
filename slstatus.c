@@ -400,7 +400,7 @@ static char *
 run_command(const char *cmd)
 {
 	FILE *fp;
-	char buf[64] = "n/a";
+	char buf[1024] = "n/a";
 
 	fp = popen(cmd, "r");
 	if (fp == NULL) {
@@ -408,8 +408,10 @@ run_command(const char *cmd)
 		return smprintf(UNKNOWN_STR);
 	}
 	fgets(buf, sizeof(buf)-1, fp);
-	buf[strlen(buf)-1] = '\0';
 	pclose(fp);
+
+	buf[strlen(buf)] = '\0';
+	strtok(buf, "\n");
 
 	return smprintf("%s", buf);
 }
