@@ -269,7 +269,6 @@ static char *
 hostname(void)
 {
 	char buf[HOST_NAME_MAX];
-	FILE *fp;
 
 	if (gethostname(buf, sizeof(buf)) == -1) {
 		warn(1, "hostname");
