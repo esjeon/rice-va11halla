@@ -424,7 +424,7 @@ run_command(const char *cmd)
 static char *
 swap_free(void)
 {
-	long free;
+	long total, free;
 	FILE *fp;
 	char buf[2048];
 	size_t bytes_read;
@@ -440,6 +440,12 @@ swap_free(void)
 	fclose(fp);
 	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
 		warn("Failed to read /proc/meminfo\n");
+		return smprintf(UNKNOWN_STR);
+	}
+
+	match = strstr(buf, "SwapTotal");
+	sscanf(match, "SwapTotal: %ld kB\n", &total);
+	if (total == 0) {
 		return smprintf(UNKNOWN_STR);
 	}
 
@@ -471,11 +477,14 @@ swap_perc(void)
 		return smprintf(UNKNOWN_STR);
 	}
 
-	match = strstr(buf, "SwapCached");
-	sscanf(match, "SwapCached: %ld kB\n", &cached);
-
 	match = strstr(buf, "SwapTotal");
 	sscanf(match, "SwapTotal: %ld kB\n", &total);
+	if (total == 0) {
+		return smprintf(UNKNOWN_STR);
+	}
+
+	match = strstr(buf, "SwapCached");
+	sscanf(match, "SwapCached: %ld kB\n", &cached);
 
 	match = strstr(buf, "SwapFree");
 	sscanf(match, "SwapFree: %ld kB\n", &free);
@@ -507,6 +516,9 @@ swap_total(void)
 
 	match = strstr(buf, "SwapTotal");
 	sscanf(match, "SwapTotal: %ld kB\n", &total);
+	if (total == 0) {
+		return smprintf(UNKNOWN_STR);
+	}
 
 	return smprintf("%f", (float)total / 1024 / 1024);
 }
@@ -533,11 +545,14 @@ swap_used(void)
 		return smprintf(UNKNOWN_STR);
 	}
 
-	match = strstr(buf, "SwapCached");
-	sscanf(match, "SwapCached: %ld kB\n", &cached);
-
 	match = strstr(buf, "SwapTotal");
 	sscanf(match, "SwapTotal: %ld kB\n", &total);
+	if (total == 0) {
+		return smprintf(UNKNOWN_STR);
+	}
+
+	match = strstr(buf, "SwapCached");
+	sscanf(match, "SwapCached: %ld kB\n", &cached);
 
 	match = strstr(buf, "SwapFree");
 	sscanf(match, "SwapFree: %ld kB\n", &free);
