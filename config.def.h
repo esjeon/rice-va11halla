@@ -19,6 +19,7 @@
 - gid (gid of current user) [argument: NULL]
 - hostname [argument: NULL]
 - ip (ip address) [argument: interface]
+- kernel_release (uname -r) [argument: NULL]
 - load_avg (load average) [argument: NULL]
 - ram_free (free ram in GB) [argument: NULL]
 - ram_perc (ram usage in percent) [argument: NULL]

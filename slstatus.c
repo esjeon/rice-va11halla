@@ -20,6 +20,7 @@
 #include <sys/socket.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <time.h>
 #include <unistd.h>
 #include <X11/Xlib.h>
@@ -68,6 +69,7 @@ static char *username(void);
 static char *vol_perc(const char *card);
 static char *wifi_perc(const char *iface);
 static char *wifi_essid(const char *iface);
+static char *kernel_release(void);
 static void set_status(const char *str);
 static void sighandler(const int signo);
 static void usage(void);
@@ -719,6 +721,16 @@ wifi_essid(const char *iface)
 		return smprintf(UNKNOWN_STR);
 	else
 		return smprintf("%s", (char *)wreq.u.essid.pointer);
+}
+
+static char *
+kernel_release(void)
+{
+	struct utsname udata;
+	if (uname(&udata) < 0)
+		return smprintf(UNKNOWN_STR);
+
+	return smprintf("%s", udata.release);
 }
 
 static void

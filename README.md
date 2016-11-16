@@ -17,6 +17,7 @@ The following information is included:
 - Username/GID/UID
 - Hostname
 - IP addresses
+- Kernel version
 - Load averages
 - Memory status (free memory, percentage, total memory and used memory)
 - Swap status (free swap, percentage, total swap and used swap)
