@@ -759,7 +759,7 @@ int
 main(int argc, char *argv[])
 {
 	unsigned short int i;
-	char status_string[4096];
+	char status_string[2048];
 	char *res, *element;
 	struct arg argument;
 	struct sigaction act;
@@ -811,7 +811,8 @@ main(int argc, char *argv[])
 				element = smprintf(UNKNOWN_STR);
 				warnx("Failed to format output");
 			}
-			strlcat(status_string, element, sizeof(status_string));
+			if (strlcat(status_string, element, sizeof(status_string)) >= sizeof(status_string))
+				warnx("Output too long");
 			free(res);
 			free(element);
 		}
