@@ -443,7 +443,7 @@ swap_free(void)
 	buf[bytes_read] = '\0';
 	fclose(fp);
 	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
+		warn("Failed to read from /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
 	}
 
@@ -477,7 +477,7 @@ swap_perc(void)
 	buf[bytes_read] = '\0';
 	fclose(fp);
 	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
+		warn("Failed to read from /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
 	}
 
@@ -514,7 +514,7 @@ swap_total(void)
 	buf[bytes_read] = '\0';
 	fclose(fp);
 	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
+		warn("Failed to read from /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
 	}
 
@@ -545,7 +545,7 @@ swap_used(void)
 	buf[bytes_read] = '\0';
 	fclose(fp);
 	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
+		warn("Failed to read from /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
 	}
 
