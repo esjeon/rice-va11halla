@@ -439,9 +439,15 @@ swap_free(void)
 		warn("Failed to open file /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
 	}
-	bytes_read = fread(buf, sizeof(char), sizeof(buf), fp);
+
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+		warn("swap_free: read error");
+		fclose(fp);
+	}
+
 	buf[bytes_read] = '\0';
 	fclose(fp);
+
 	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
 		warn("Failed to read from /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
@@ -473,9 +479,11 @@ swap_perc(void)
 		warn("Failed to open file /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
 	}
+
 	bytes_read = fread(buf, sizeof(char), sizeof(buf), fp);
 	buf[bytes_read] = '\0';
 	fclose(fp);
+
 	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
 		warn("Failed to read from /proc/meminfo");
 		return smprintf(UNKNOWN_STR);
@@ -487,11 +495,16 @@ swap_perc(void)
 		return smprintf(UNKNOWN_STR);
 	}
 
-	match = strstr(buf, "SwapCached");
+	if ((match = strstr(buf, "SwapCached")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapCached: %ld kB\n", &cached);
 
-	match = strstr(buf, "SwapFree");
+	if ((match = strstr(buf, "SwapFree")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapFree: %ld kB\n", &free);
+
 
 	return smprintf("%d%%", 100 * (total - free - cached) / total);
 }
