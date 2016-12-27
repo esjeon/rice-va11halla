@@ -75,7 +75,7 @@ static void usage(void);
 
 char *argv0;
 char concat[];
-static unsigned short int delay;
+static unsigned short int delay = 0;
 static unsigned short int done;
 static unsigned short int dflag, oflag;
 static Display *dpy;
@@ -164,7 +164,7 @@ cpu_perc(void)
 	fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2], &a[3]);
 	fclose(fp);
 
-	delay = (UPDATE_INTERVAL - (UPDATE_INTERVAL - 1));
+	delay++;
 	sleep(delay);
 
 	fp = fopen("/proc/stat", "r");
@@ -829,8 +829,13 @@ main(int argc, char *argv[])
 		 * subtract delay time spend in function
 		 * calls from the actual global delay time
 		 */
-		sleep(UPDATE_INTERVAL - delay);
-		delay = 0;
+		if ((UPDATE_INTERVAL - delay) <= 0) {
+			delay = 0;
+			continue;
+		} else {
+			sleep(UPDATE_INTERVAL - delay);
+			delay = 0;
+		}
 	}
 
 	if (!oflag) {
