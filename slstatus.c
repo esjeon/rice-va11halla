@@ -69,7 +69,6 @@ static char *vol_perc(const char *card);
 static char *wifi_perc(const char *iface);
 static char *wifi_essid(const char *iface);
 static char *kernel_release(void);
-static void set_status(const char *str);
 static void sighandler(const int signo);
 static void usage(void);
 
@@ -748,13 +747,6 @@ kernel_release(void)
 }
 
 static void
-set_status(const char *str)
-{
-	XStoreName(dpy, DefaultRootWindow(dpy), str);
-	XSync(dpy, False);
-}
-
-static void
 sighandler(const int signo)
 {
 	if (signo == SIGTERM || signo == SIGINT) {
@@ -832,7 +824,8 @@ main(int argc, char *argv[])
 		}
 
 		if (!oflag) {
-			set_status(status_string);
+			XStoreName(dpy, DefaultRootWindow(dpy), status_string);
+			XSync(dpy, False);
 		} else {
 			printf("%s\n", status_string);
 		}
@@ -851,7 +844,7 @@ main(int argc, char *argv[])
 	}
 
 	if (!oflag) {
-		set_status(NULL);
+		XStoreName(dpy, DefaultRootWindow(dpy), NULL);
 		XCloseDisplay(dpy);
 	}
 
