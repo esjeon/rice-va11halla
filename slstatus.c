@@ -407,7 +407,7 @@ run_command(const char *cmd)
 {
 	char *nlptr;
 	FILE *fp;
-	char buf[1024] = "n/a";
+	char buf[1024] = UNKNOWN_STR;
 
 	fp = popen(cmd, "r");
 	if (fp == NULL) {
