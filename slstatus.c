@@ -413,11 +413,10 @@ run_command(const char *cmd)
 		warn("Failed to get command output for %s", cmd);
 		return smprintf(UNKNOWN_STR);
 	}
-	fgets(buf, sizeof(buf)-1, fp);
+	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
 
 	buf[strlen(buf)] = '\0';
-	strtok(buf, "\n");
 
 	return smprintf("%s", buf);
 }
