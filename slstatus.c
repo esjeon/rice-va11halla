@@ -699,11 +699,11 @@ wifi_perc(const char *iface)
 	fgets(buf, sizeof(buf), fp);
 	fclose(fp);
 
-	datastart = strstr(buf, concat);
-	if (datastart != NULL) {
-		datastart = strstr(buf, ":");
-		sscanf(datastart + 1, " %*d   %d  %*d  %*d		  %*d	   %*d		%*d		 %*d	  %*d		 %*d", &perc);
+	if ((datastart = strstr(buf, concat)) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
 	}
+	datastart = (datastart+(strlen(iface)+1));
+	sscanf(datastart + 1, " %*d   %d  %*d  %*d		  %*d	   %*d		%*d		 %*d	  %*d		 %*d", &perc);
 
 	return smprintf("%d%%", perc);
 }
