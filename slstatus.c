@@ -830,10 +830,6 @@ main(int argc, char *argv[])
 			printf("%s\n", status_string);
 		}
 
-		/*
-		 * subtract delay time spend in function
-		 * calls from the actual global delay time
-		 */
 		if ((UPDATE_INTERVAL - delay) <= 0) {
 			delay = 0;
 			continue;
