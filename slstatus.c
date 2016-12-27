@@ -1,6 +1,5 @@
 /* See LICENSE file for copyright and license details. */
 
-#include <alsa/asoundlib.h>
 #include <err.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
@@ -18,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/socket.h>
+#include <sys/soundcard.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -617,41 +617,26 @@ uid(void)
 static char *
 vol_perc(const char *card)
 {
-	int mute;
-	long int vol, max, min;
-	snd_mixer_t *handle;
-	snd_mixer_elem_t *elem;
-	snd_mixer_selem_id_t *s_elem;
+	unsigned int i;
+	int v, afd, devmask;
+	char *vnames[] = SOUND_DEVICE_NAMES;
 
-	snd_mixer_open(&handle, 0);
-	snd_mixer_attach(handle, card);
-	snd_mixer_selem_register(handle, NULL, NULL);
-	snd_mixer_load(handle);
-	snd_mixer_selem_id_malloc(&s_elem);
-	snd_mixer_selem_id_set_name(s_elem, "Master");
-	elem = snd_mixer_find_selem(handle, s_elem);
-
-	if (elem == NULL) {
-		snd_mixer_selem_id_free(s_elem);
-		snd_mixer_close(handle);
-		warn("Failed to get volume percentage for %s", card);
+	afd = open(card, O_RDONLY);
+	if (afd < 0) {
+		warn("Cannot open %s", card);
 		return smprintf(UNKNOWN_STR);
 	}
 
-	snd_mixer_handle_events(handle);
-	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-	snd_mixer_selem_get_playback_volume(elem, 0, &vol);
-	snd_mixer_selem_get_playback_switch(elem, 0, &mute);
+	ioctl(afd, MIXER_READ(SOUND_MIXER_DEVMASK), &devmask);
+	for (i = 0; i < (sizeof(vnames) / sizeof((vnames[0]))); i++)
+		if (devmask & (1 << i))
+			if (!strcmp("vol", vnames[i]))
+				ioctl(afd, MIXER_READ(i), &v);
 
-	snd_mixer_selem_id_free(s_elem);
-	snd_mixer_close(handle);
-
-	if (!mute)
+	close(afd);
+	if (v == 0)
 		return smprintf("mute");
-	else if (max == 0)
-		return smprintf("0%%");
-	else
-		return smprintf("%lu%%", ((uint_fast16_t)(vol * 100) / max));
+	return smprintf("%d%%", v & 0xff);
 }
 
 static char *

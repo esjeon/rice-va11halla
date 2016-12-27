@@ -23,7 +23,7 @@ The following information is included:
 - Swap status (free swap, percentage, total swap and used swap)
 - Temperature
 - Uptime
-- Volume percentage (ALSA)
+- Volume percentage (OSS/ALSA)
 - WiFi signal percentage and ESSID
 
 Multiple entries per function (e.g. multiple batteries) are supported and everything can be reordered and customized via a C header file (similar to other suckless programs).
