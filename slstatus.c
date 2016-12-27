@@ -70,7 +70,7 @@ static char *wifi_perc(const char *iface);
 static char *wifi_essid(const char *iface);
 static char *kernel_release(void);
 static void sighandler(const int signo);
-static void usage(void);
+static void usage(int);
 
 char *argv0;
 char concat[];
@@ -756,10 +756,10 @@ sighandler(const int signo)
 }
 
 static void
-usage(void)
+usage(int eval)
 {
-	fprintf(stderr, "usage: %s [-dhov]\n", argv0);
-	exit(1);
+	fprintf(stderr, "usage: %s [-d] [-o] [-v] [-h]\n", argv0);
+	exit(eval);
 }
 
 int
@@ -781,12 +781,14 @@ main(int argc, char *argv[])
 		case 'v':
 			printf("slstatus %s (C) 2016 slstatus engineers\n", VERSION);
 			return 0;
+		case 'h':
+			usage(0);
 		default:
-			usage();
+			usage(1);
 	} ARGEND
 
 	if (dflag && oflag) {
-		usage();
+		usage(1);
 	}
 	if (dflag && daemon(1, 1) < 0) {
 		err(1, "daemon");
