@@ -405,6 +405,7 @@ ram_used(void)
 static char *
 run_command(const char *cmd)
 {
+	char *nlptr;
 	FILE *fp;
 	char buf[1024] = "n/a";
 
@@ -415,8 +416,11 @@ run_command(const char *cmd)
 	}
 	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
-
 	buf[strlen(buf)] = '\0';
+
+	if ((nlptr = strstr(buf, "\n")) != NULL) {
+		nlptr[0] = '\0';
+	}
 
 	return smprintf("%s", buf);
 }
