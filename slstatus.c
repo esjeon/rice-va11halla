@@ -717,7 +717,8 @@ wifi_essid(const char *iface)
 
 	memset(&wreq, 0, sizeof(struct iwreq));
 	wreq.u.essid.length = IW_ESSID_MAX_SIZE+1;
-	sprintf(wreq.ifr_name, iface);
+	snprintf(wreq.ifr_name, ifrn_name, "%s", iface);
+
 	if (sockfd == -1) {
 		warn("Failed to get ESSID for interface %s", iface);
 		return smprintf("%s", UNKNOWN_STR);
