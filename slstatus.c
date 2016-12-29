@@ -820,8 +820,9 @@ main(int argc, char *argv[])
 				element = smprintf("%s", UNKNOWN_STR);
 				warnx("Failed to format output");
 			}
-			if (strlcat(status_string, element, sizeof(status_string)) >= sizeof(status_string))
+			if (strlcat(status_string, element, sizeof(status_string)) >= sizeof(status_string)) {
 				warnx("Output too long");
+			}
 			free(res);
 			free(element);
 		}
