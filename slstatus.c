@@ -26,7 +26,6 @@
 #include <X11/Xlib.h>
 
 #undef strlcat
-#undef strlcpy
 
 #include "extern/arg.h"
 #include "extern/strlcat.h"
