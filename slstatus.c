@@ -780,7 +780,7 @@ main(int argc, char *argv[])
 			oflag = 1;
 			break;
 		case 'v':
-			printf("slstatus %s (C) 2016 slstatus engineers\n", VERSION);
+			printf("slstatus (C) 2016 slstatus engineers\n");
 			return 0;
 		case 'h':
 			usage(0);
