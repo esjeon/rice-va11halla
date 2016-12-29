@@ -51,6 +51,7 @@ static char *entropy(void);
 static char *gid(void);
 static char *hostname(void);
 static char *ip(const char *iface);
+static char *kernel_release(void);
 static char *load_avg(void);
 static char *ram_free(void);
 static char *ram_perc(void);
@@ -68,7 +69,6 @@ static char *username(void);
 static char *vol_perc(const char *card);
 static char *wifi_perc(const char *iface);
 static char *wifi_essid(const char *iface);
-static char *kernel_release(void);
 static void sighandler(const int signo);
 static void usage(int);
 
@@ -312,6 +312,18 @@ ip(const char *iface)
 	freeifaddrs(ifaddr);
 
 	return smprintf("%s", UNKNOWN_STR);
+}
+
+static char *
+kernel_release(void)
+{
+	struct utsname udata;
+
+	if (uname(&udata) < 0) {
+		return smprintf(UNKNOWN_STR);
+	}
+
+	return smprintf("%s", udata.release);
 }
 
 static char *
@@ -735,16 +747,6 @@ wifi_essid(const char *iface)
 		return smprintf("%s", UNKNOWN_STR);
 	else
 		return smprintf("%s", (char *)wreq.u.essid.pointer);
-}
-
-static char *
-kernel_release(void)
-{
-	struct utsname udata;
-	if (uname(&udata) < 0)
-		return smprintf("%s", UNKNOWN_STR);
-
-	return smprintf("%s", udata.release);
 }
 
 static void
