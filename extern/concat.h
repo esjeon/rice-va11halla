@@ -11,6 +11,9 @@ ccat(const unsigned short int count, ...)
 	unsigned short int i;
 	concat[0] = '\0';
 
+	if (count == 0)
+		return;
+
 	va_start(ap, count);
 	for(i = 0; i < count; i++)
 		strlcat(concat, va_arg(ap, char *), sizeof(concat));
