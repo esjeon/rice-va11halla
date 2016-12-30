@@ -69,7 +69,7 @@ static char *vol_perc(const char *card);
 static char *wifi_perc(const char *iface);
 static char *wifi_essid(const char *iface);
 static void sighandler(const int signo);
-static void usage(int);
+static void usage(const int eval);
 
 char *argv0;
 char concat[];
@@ -746,7 +746,7 @@ sighandler(const int signo)
 }
 
 static void
-usage(int eval)
+usage(const int eval)
 {
 	fprintf(stderr, "usage: %s [-d] [-o] [-v] [-h]\n", argv0);
 	exit(eval);
