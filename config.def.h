@@ -34,7 +34,7 @@
 - uid (uid of current user) [argument: NULL]
 - uptime (uptime) [argument: NULL]
 - username (username of current user) [argument: NULL]
-- vol_perc (oss/alsa volume and mute status in percent) [argument: /dev/mixer]
+- vol_perc (oss/alsa volume status (see README)) [argument: /dev/mixer]
 - wifi_perc (wifi signal in percent) [argument: wifi card interface name]
 - wifi_essid (wifi essid) [argument: wifi card interface name] */
 static const struct arg args[] = {

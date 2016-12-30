@@ -628,14 +628,18 @@ vol_perc(const char *card)
 	}
 
 	ioctl(afd, MIXER_READ(SOUND_MIXER_DEVMASK), &devmask);
-	for (i = 0; i < (sizeof(vnames) / sizeof((vnames[0]))); i++)
-		if (devmask & (1 << i))
-			if (!strcmp("vol", vnames[i]))
+	for (i = 0; i < (sizeof(vnames) / sizeof((vnames[0]))); i++) {
+		if (devmask & (1 << i)) {
+			if (!strcmp("vol", vnames[i])) {
 				ioctl(afd, MIXER_READ(i), &v);
+			}
+		}
+	}
 
 	close(afd);
-	if (v == 0)
+	if (v == 0) {
 		return smprintf("mute");
+	}
 	return smprintf("%d%%", v & 0xff);
 }
 

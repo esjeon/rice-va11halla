@@ -50,6 +50,16 @@ If you use any other status bar or window manager you will have to figure it out
 
 	slstatus -o | other_status_bar &
 
+### Specific function quirks
+
+- Volume percentage
+
+If there is no `/dev/mixer` on your system and you use ALSA, it means you have to load the OSS compatibility module by issuing:
+
+```
+# modprobe snd-pcm-oss
+```
+
 ## Contributing
 
 Hunt FIXME's in the code or do WTF you want! If it is useful, I will merge.
