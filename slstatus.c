@@ -26,11 +26,9 @@
 #include <X11/Xlib.h>
 
 #undef strlcat
-#undef strlcpy
 
 #include "extern/arg.h"
 #include "extern/strlcat.h"
-#include "extern/strlcpy.h"
 #include "extern/concat.h"
 
 struct arg {
@@ -52,6 +50,7 @@ static char *entropy(void);
 static char *gid(void);
 static char *hostname(void);
 static char *ip(const char *iface);
+static char *kernel_release(void);
 static char *load_avg(void);
 static char *ram_free(void);
 static char *ram_perc(void);
@@ -69,14 +68,12 @@ static char *username(void);
 static char *vol_perc(const char *card);
 static char *wifi_perc(const char *iface);
 static char *wifi_essid(const char *iface);
-static char *kernel_release(void);
-static void set_status(const char *str);
 static void sighandler(const int signo);
-static void usage(void);
+static void usage(int);
 
 char *argv0;
 char concat[];
-static unsigned short int delay;
+static unsigned short int delay = 0;
 static unsigned short int done;
 static unsigned short int dflag, oflag;
 static Display *dpy;
@@ -116,7 +113,7 @@ battery_perc(const char *bat)
 	fp = fopen(concat, "r");
 	if (fp == NULL) {
 		warn("Failed to open file %s", concat);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%i", &perc);
 	fclose(fp);
@@ -134,7 +131,7 @@ battery_state(const char *bat)
 	fp = fopen(concat, "r");
 	if (fp == NULL) {
 		warn("Failed to open file %s", concat);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%12s", state);
 	fclose(fp);
@@ -160,18 +157,18 @@ cpu_perc(void)
 	fp = fopen("/proc/stat", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/stat");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2], &a[3]);
 	fclose(fp);
 
-	delay = (UPDATE_INTERVAL - (UPDATE_INTERVAL - 1));
+	delay++;
 	sleep(delay);
 
 	fp = fopen("/proc/stat", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/stat");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &b[0], &b[1], &b[2], &b[3]);
 	fclose(fp);
@@ -188,7 +185,7 @@ datetime(const char *fmt)
 
 	t = time(NULL);
 	if (strftime(str, sizeof(str), fmt, localtime(&t)) == 0) {
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	return smprintf("%s", str);
@@ -201,7 +198,7 @@ disk_free(const char *mnt)
 
 	if (statvfs(mnt, &fs) < 0) {
 		warn("Failed to get filesystem info");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	return smprintf("%f", (float)fs.f_bsize * (float)fs.f_bfree / 1024 / 1024 / 1024);
@@ -215,7 +212,7 @@ disk_perc(const char *mnt)
 
 	if (statvfs(mnt, &fs) < 0) {
 		warn("Failed to get filesystem info");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	perc = 100 * (1.0f - ((float)fs.f_bfree / (float)fs.f_blocks));
@@ -230,7 +227,7 @@ disk_total(const char *mnt)
 
 	if (statvfs(mnt, &fs) < 0) {
 		warn("Failed to get filesystem info");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	return smprintf("%f", (float)fs.f_bsize * (float)fs.f_blocks / 1024 / 1024 / 1024);
@@ -243,7 +240,7 @@ disk_used(const char *mnt)
 
 	if (statvfs(mnt, &fs) < 0) {
 		warn("Failed to get filesystem info");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	return smprintf("%f", (float)fs.f_bsize * ((float)fs.f_blocks - (float)fs.f_bfree) / 1024 / 1024 / 1024);
@@ -258,7 +255,7 @@ entropy(void)
 	fp= fopen("/proc/sys/kernel/random/entropy_avail", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/sys/kernel/random/entropy_avail");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%d", &num);
 	fclose(fp);
@@ -279,7 +276,7 @@ hostname(void)
 
 	if (gethostname(buf, sizeof(buf)) == -1) {
 		warn("hostname");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	return smprintf("%s", buf);
@@ -294,7 +291,7 @@ ip(const char *iface)
 
 	if (getifaddrs(&ifaddr) == -1) {
 		warn("Failed to get IP address for interface %s", iface);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
@@ -305,7 +302,7 @@ ip(const char *iface)
 		if ((strcmp(ifa->ifa_name, iface) == 0) && (ifa->ifa_addr->sa_family == AF_INET)) {
 			if (s != 0) {
 				warnx("Failed to get IP address for interface %s", iface);
-				return smprintf(UNKNOWN_STR);
+				return smprintf("%s", UNKNOWN_STR);
 			}
 			return smprintf("%s", host);
 		}
@@ -313,7 +310,19 @@ ip(const char *iface)
 
 	freeifaddrs(ifaddr);
 
-	return smprintf(UNKNOWN_STR);
+	return smprintf("%s", UNKNOWN_STR);
+}
+
+static char *
+kernel_release(void)
+{
+	struct utsname udata;
+
+	if (uname(&udata) < 0) {
+		return smprintf(UNKNOWN_STR);
+	}
+
+	return smprintf("%s", udata.release);
 }
 
 static char *
@@ -323,7 +332,7 @@ load_avg(void)
 
 	if (getloadavg(avgs, 3) < 0) {
 		warnx("Failed to get the load avg");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	return smprintf("%.2f %.2f %.2f", avgs[0], avgs[1], avgs[2]);
@@ -338,7 +347,7 @@ ram_free(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "MemFree: %ld kB\n", &free);
 	fclose(fp);
@@ -355,7 +364,7 @@ ram_perc(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "MemTotal: %ld kB\n", &total);
 	fscanf(fp, "MemFree: %ld kB\n", &free);
@@ -375,7 +384,7 @@ ram_total(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "MemTotal: %ld kB\n", &total);
 	fclose(fp);
@@ -392,7 +401,7 @@ ram_used(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "MemTotal: %ld kB\n", &total);
 	fscanf(fp, "MemFree: %ld kB\n", &free);
@@ -406,19 +415,22 @@ ram_used(void)
 static char *
 run_command(const char *cmd)
 {
+	char *nlptr;
 	FILE *fp;
-	char buf[1024] = "n/a";
+	char buf[1024] = UNKNOWN_STR;
 
 	fp = popen(cmd, "r");
 	if (fp == NULL) {
 		warn("Failed to get command output for %s", cmd);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
-	fgets(buf, sizeof(buf)-1, fp);
+	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
-
 	buf[strlen(buf)] = '\0';
-	strtok(buf, "\n");
+
+	if ((nlptr = strstr(buf, "\n")) != NULL) {
+		nlptr[0] = '\0';
+	}
 
 	return smprintf("%s", buf);
 }
@@ -435,23 +447,26 @@ swap_free(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
-	bytes_read = fread(buf, sizeof(char), sizeof(buf), fp);
+
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+		warn("swap_free: read error");
+		fclose(fp);
+		return smprintf("%s", UNKNOWN_STR);
+	}
+
 	buf[bytes_read] = '\0';
 	fclose(fp);
-	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
-		return smprintf(UNKNOWN_STR);
-	}
 
-	match = strstr(buf, "SwapTotal");
+	if ((match = strstr(buf, "SwapTotal")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapTotal: %ld kB\n", &total);
-	if (total == 0) {
-		return smprintf(UNKNOWN_STR);
-	}
 
-	match = strstr(buf, "SwapFree");
+	if ((match = strstr(buf, "SwapFree")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapFree: %ld kB\n", &free);
 
 	return smprintf("%f", (float)free / 1024 / 1024);
@@ -469,26 +484,31 @@ swap_perc(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
-	bytes_read = fread(buf, sizeof(char), sizeof(buf), fp);
+
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+		warn("swap_perc: read error");
+		fclose(fp);
+		return smprintf("%s", UNKNOWN_STR);
+	}
+
 	buf[bytes_read] = '\0';
 	fclose(fp);
-	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
-		return smprintf(UNKNOWN_STR);
-	}
 
-	match = strstr(buf, "SwapTotal");
+	if ((match = strstr(buf, "SwapTotal")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapTotal: %ld kB\n", &total);
-	if (total == 0) {
-		return smprintf(UNKNOWN_STR);
-	}
 
-	match = strstr(buf, "SwapCached");
+	if ((match = strstr(buf, "SwapCached")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapCached: %ld kB\n", &cached);
 
-	match = strstr(buf, "SwapFree");
+	if ((match = strstr(buf, "SwapFree")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapFree: %ld kB\n", &free);
 
 	return smprintf("%d%%", 100 * (total - free - cached) / total);
@@ -506,21 +526,21 @@ swap_total(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
-	bytes_read = fread(buf, sizeof(char), sizeof(buf), fp);
-	buf[bytes_read] = '\0';
-	fclose(fp);
-	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
-		return smprintf(UNKNOWN_STR);
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+		warn("swap_total: read error");
+		fclose(fp);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
-	match = strstr(buf, "SwapTotal");
-	sscanf(match, "SwapTotal: %ld kB\n", &total);
-	if (total == 0) {
-		return smprintf(UNKNOWN_STR);
+	buf[bytes_read] = '\0';
+	fclose(fp);
+
+	if ((match = strstr(buf, "SwapTotal")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
 	}
+	sscanf(match, "SwapTotal: %ld kB\n", &total);
 
 	return smprintf("%f", (float)total / 1024 / 1024);
 }
@@ -537,26 +557,30 @@ swap_used(void)
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
-	bytes_read = fread(buf, sizeof(char), sizeof(buf), fp);
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+		warn("swap_used: read error");
+		fclose(fp);
+		return smprintf("%s", UNKNOWN_STR);
+	}
+
 	buf[bytes_read] = '\0';
 	fclose(fp);
-	if (bytes_read == 0 || bytes_read == sizeof(buf)) {
-		warn("Failed to read /proc/meminfo\n");
-		return smprintf(UNKNOWN_STR);
-	}
 
-	match = strstr(buf, "SwapTotal");
+	if ((match = strstr(buf, "SwapTotal")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapTotal: %ld kB\n", &total);
-	if (total == 0) {
-		return smprintf(UNKNOWN_STR);
-	}
 
-	match = strstr(buf, "SwapCached");
+	if ((match = strstr(buf, "SwapCached")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapCached: %ld kB\n", &cached);
 
-	match = strstr(buf, "SwapFree");
+	if ((match = strstr(buf, "SwapFree")) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	sscanf(match, "SwapFree: %ld kB\n", &free);
 
 	return smprintf("%f", (float)(total - free - cached) / 1024 / 1024);
@@ -571,7 +595,7 @@ temp(const char *file)
 	fp = fopen(file, "r");
 	if (fp == NULL) {
 		warn("Failed to open file %s", file);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%d", &temp);
 	fclose(fp);
@@ -601,7 +625,7 @@ username(void)
 
 	if (pw == NULL) {
 		warn("Failed to get username");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	return smprintf("%s", pw->pw_name);
@@ -656,18 +680,18 @@ wifi_perc(const char *iface)
 	fp = fopen(concat, "r");
 	if (fp == NULL) {
 		warn("Failed to open file %s", concat);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	fgets(status, 5, fp);
 	fclose(fp);
 	if(strcmp(status, "up\n") != 0) {
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	fp = fopen("/proc/net/wireless", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/net/wireless");
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	ccat(2, iface, ":");
 	fgets(buf, sizeof(buf), fp);
@@ -675,11 +699,11 @@ wifi_perc(const char *iface)
 	fgets(buf, sizeof(buf), fp);
 	fclose(fp);
 
-	datastart = strstr(buf, concat);
-	if (datastart != NULL) {
-		datastart = strstr(buf, ":");
-		sscanf(datastart + 1, " %*d   %d  %*d  %*d		  %*d	   %*d		%*d		 %*d	  %*d		 %*d", &perc);
+	if ((datastart = strstr(buf, concat)) == NULL) {
+		return smprintf("%s", UNKNOWN_STR);
 	}
+	datastart = (datastart+(strlen(iface)+1));
+	sscanf(datastart + 1, " %*d   %d  %*d  %*d		  %*d	   %*d		%*d		 %*d	  %*d		 %*d", &perc);
 
 	return smprintf("%d%%", perc);
 }
@@ -693,40 +717,24 @@ wifi_essid(const char *iface)
 
 	memset(&wreq, 0, sizeof(struct iwreq));
 	wreq.u.essid.length = IW_ESSID_MAX_SIZE+1;
-	sprintf(wreq.ifr_name, iface);
+	snprintf(wreq.ifr_name, sizeof(wreq.ifr_name), "%s", iface);
+
 	if (sockfd == -1) {
 		warn("Failed to get ESSID for interface %s", iface);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 	wreq.u.essid.pointer = id;
 	if (ioctl(sockfd,SIOCGIWESSID, &wreq) == -1) {
 		warn("Failed to get ESSID for interface %s", iface);
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	}
 
 	close(sockfd);
 
 	if (strcmp((char *)wreq.u.essid.pointer, "") == 0)
-		return smprintf(UNKNOWN_STR);
+		return smprintf("%s", UNKNOWN_STR);
 	else
 		return smprintf("%s", (char *)wreq.u.essid.pointer);
-}
-
-static char *
-kernel_release(void)
-{
-	struct utsname udata;
-	if (uname(&udata) < 0)
-		return smprintf(UNKNOWN_STR);
-
-	return smprintf("%s", udata.release);
-}
-
-static void
-set_status(const char *str)
-{
-	XStoreName(dpy, DefaultRootWindow(dpy), str);
-	XSync(dpy, False);
 }
 
 static void
@@ -738,17 +746,17 @@ sighandler(const int signo)
 }
 
 static void
-usage(void)
+usage(int eval)
 {
-	fprintf(stderr, "usage: %s [-dhov]\n", argv0);
-	exit(1);
+	fprintf(stderr, "usage: %s [-d] [-o] [-v] [-h]\n", argv0);
+	exit(eval);
 }
 
 int
 main(int argc, char *argv[])
 {
 	unsigned short int i;
-	char status_string[4096];
+	char status_string[2048];
 	char *res, *element;
 	struct arg argument;
 	struct sigaction act;
@@ -761,14 +769,16 @@ main(int argc, char *argv[])
 			oflag = 1;
 			break;
 		case 'v':
-			printf("slstatus %s (C) 2016 slstatus engineers\n", VERSION);
+			printf("slstatus (C) 2016 slstatus engineers\n");
 			return 0;
+		case 'h':
+			usage(0);
 		default:
-			usage();
+			usage(1);
 	} ARGEND
 
 	if (dflag && oflag) {
-		usage();
+		usage(1);
 	}
 	if (dflag && daemon(1, 1) < 0) {
 		err(1, "daemon");
@@ -797,30 +807,34 @@ main(int argc, char *argv[])
 			}
 			element = smprintf(argument.fmt, res);
 			if (element == NULL) {
-				element = smprintf(UNKNOWN_STR);
+				element = smprintf("%s", UNKNOWN_STR);
 				warnx("Failed to format output");
 			}
-			strlcat(status_string, element, sizeof(status_string));
+			if (strlcat(status_string, element, sizeof(status_string)) >= sizeof(status_string)) {
+				warnx("Output too long");
+			}
 			free(res);
 			free(element);
 		}
 
 		if (!oflag) {
-			set_status(status_string);
+			XStoreName(dpy, DefaultRootWindow(dpy), status_string);
+			XSync(dpy, False);
 		} else {
 			printf("%s\n", status_string);
 		}
 
-		/*
-		 * subtract delay time spend in function
-		 * calls from the actual global delay time
-		 */
-		sleep(UPDATE_INTERVAL - delay);
-		delay = 0;
+		if ((UPDATE_INTERVAL - delay) <= 0) {
+			delay = 0;
+			continue;
+		} else {
+			sleep(UPDATE_INTERVAL - delay);
+			delay = 0;
+		}
 	}
 
 	if (!oflag) {
-		set_status(NULL);
+		XStoreName(dpy, DefaultRootWindow(dpy), NULL);
 		XCloseDisplay(dpy);
 	}
 

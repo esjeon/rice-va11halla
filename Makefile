@@ -31,16 +31,16 @@ ${NAME}: ${OBJ}
 
 clean:
 	@echo cleaning
-	@rm -f ${NAME} ${OBJ} ${NAME}-${VERSION}.tar.gz
+	@rm -f ${NAME} ${OBJ} ${NAME}.tar.gz
 
 dist: clean
 	@echo creating dist tarball
-	@mkdir -p ${NAME}-${VERSION}
+	@mkdir -p ${NAME}
 	@cp -R Makefile config.mk LICENSE \
-		${SRC} ${NAME}-${VERSION}
-	@tar -cf ${NAME}-${VERSION}.tar ${NAME}-${VERSION}
-	@gzip ${NAME}-${VERSION}.tar
-	@rm -rf ${NAME}-${VERSION}
+		${SRC} ${NAME}
+	@tar -cf ${NAME}.tar ${NAME}
+	@gzip ${NAME}.tar
+	@rm -rf ${NAME}
 
 install: all
 	@echo installing executable file to ${DESTDIR}${PREFIX}/bin
@@ -49,7 +49,7 @@ install: all
 	@chmod 755 ${DESTDIR}${PREFIX}/bin/${NAME}
 	@echo installing manual page to ${DESTDIR}${MANPREFIX}/man1
 	@mkdir -p ${DESTDIR}${MANPREFIX}/man1
-	@sed "s/VERSION/${VERSION}/g" < ${NAME}.1 > ${DESTDIR}${MANPREFIX}/man1/${NAME}.1
+	@cp -f ${NAME}.1 ${DESTDIR}${MANPREFIX}/man1
 	@chmod 644 ${DESTDIR}${MANPREFIX}/man1/${NAME}.1
 
 uninstall:
