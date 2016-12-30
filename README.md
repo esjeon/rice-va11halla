@@ -23,7 +23,7 @@ The following information is included:
 - Swap status (free swap, percentage, total swap and used swap)
 - Temperature
 - Uptime
-- Volume percentage (ALSA)
+- Volume percentage (OSS/ALSA)
 - WiFi signal percentage and ESSID
 
 Multiple entries per function (e.g. multiple batteries) are supported and everything can be reordered and customized via a C header file (similar to other suckless programs).
@@ -49,6 +49,16 @@ If you use DWM or any other window manager that uses WM_NAME, write the followin
 If you use any other status bar or window manager you will have to figure it out yourself. Something like this could fit your requirements:
 
 	slstatus -o | other_status_bar &
+
+### Specific function quirks
+
+- Volume percentage
+
+If there is no `/dev/mixer` on your system and you use ALSA, it means you have to load the OSS compatibility module by issuing:
+
+```
+# modprobe snd-pcm-oss
+```
 
 ## Contributing
 
