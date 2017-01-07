@@ -29,7 +29,6 @@
 
 #include "extern/arg.h"
 #include "extern/strlcat.h"
-#include "extern/concat.h"
 
 struct arg {
 	char *(*func)();
@@ -72,7 +71,6 @@ static void sighandler(const int signo);
 static void usage(const int eval);
 
 char *argv0;
-char concat[];
 static unsigned short int delay = 0;
 static unsigned short int done;
 static unsigned short int dflag, oflag;
@@ -107,12 +105,13 @@ static char *
 battery_perc(const char *bat)
 {
 	int perc;
+	char path[PATH_MAX];
 	FILE *fp;
 
-	ccat(3, "/sys/class/power_supply/", bat, "/capacity");
-	fp = fopen(concat, "r");
+	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/capacity");
+	fp = fopen(path, "r");
 	if (fp == NULL) {
-		warn("Failed to open file %s", concat);
+		warn("Failed to open file %s", path);
 		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%i", &perc);
@@ -124,13 +123,14 @@ battery_perc(const char *bat)
 static char *
 battery_state(const char *bat)
 {
+	char path[PATH_MAX];
 	char state[12];
 	FILE *fp;
 
-	ccat(3, "/sys/class/power_supply/", bat, "/status");
-	fp = fopen(concat, "r");
+	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/status");
+	fp = fopen(path, "r");
 	if (fp == NULL) {
-		warn("Failed to open file %s", concat);
+		warn("Failed to open file %s", path);
 		return smprintf("%s", UNKNOWN_STR);
 	}
 	fscanf(fp, "%12s", state);
@@ -673,13 +673,14 @@ wifi_perc(const char *iface)
 	int perc;
 	char buf[255];
 	char *datastart;
+	char path[PATH_MAX];
 	char status[5];
 	FILE *fp;
 
-	ccat(3, "/sys/class/net/", iface, "/operstate");
-	fp = fopen(concat, "r");
+	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/net/", iface, "/operstate");
+	fp = fopen(path, "r");
 	if (fp == NULL) {
-		warn("Failed to open file %s", concat);
+		warn("Failed to open file %s", path);
 		return smprintf("%s", UNKNOWN_STR);
 	}
 	fgets(status, 5, fp);
@@ -693,13 +694,13 @@ wifi_perc(const char *iface)
 		warn("Failed to open file /proc/net/wireless");
 		return smprintf("%s", UNKNOWN_STR);
 	}
-	ccat(2, iface, ":");
+
 	fgets(buf, sizeof(buf), fp);
 	fgets(buf, sizeof(buf), fp);
 	fgets(buf, sizeof(buf), fp);
 	fclose(fp);
 
-	if ((datastart = strstr(buf, concat)) == NULL) {
+	if ((datastart = strstr(buf, iface)) == NULL) {
 		return smprintf("%s", UNKNOWN_STR);
 	}
 	datastart = (datastart+(strlen(iface)+1));
