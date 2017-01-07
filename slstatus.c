@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <X11/Xlib.h>
 
-#include "extern/arg.h"
+#include "arg.h"
 
 struct arg {
 	char *(*func)();
