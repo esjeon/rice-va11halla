@@ -426,7 +426,7 @@ run_command(const char *cmd)
 	}
 	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
-	buf[strlen(buf)] = '\0';
+	buf[sizeof(buf)] = '\0';
 
 	if ((nlptr = strstr(buf, "\n")) != NULL) {
 		nlptr[0] = '\0';
