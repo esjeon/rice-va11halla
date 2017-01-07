@@ -25,10 +25,7 @@
 #include <unistd.h>
 #include <X11/Xlib.h>
 
-#undef strlcat
-
 #include "extern/arg.h"
-#include "extern/strlcat.h"
 
 struct arg {
 	char *(*func)();
@@ -811,9 +808,7 @@ main(int argc, char *argv[])
 				element = smprintf("%s", UNKNOWN_STR);
 				warnx("Failed to format output");
 			}
-			if (strlcat(status_string, element, sizeof(status_string)) >= sizeof(status_string)) {
-				warnx("Output too long");
-			}
+			strncat(status_string, element, sizeof(status_string) - strlen(status_string) - 1);
 			free(res);
 			free(element);
 		}
