@@ -6,8 +6,11 @@ NAME=slstatus
 
 all: ${NAME}
 
-${NAME}:
+${NAME}: config.h
 	${CC} ${CFLAGS} -o $@ ${NAME}.c ${LDFLAGS}
+
+config.h:
+	cp config.def.h $@
 
 clean:
 	rm -f ${NAME}
