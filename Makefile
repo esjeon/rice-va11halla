@@ -6,7 +6,7 @@ NAME=slstatus
 
 all: ${NAME}
 
-${NAME}: config.h
+${NAME}: config.h config.mk
 	${CC} ${CFLAGS} -o $@ ${NAME}.c ${LDFLAGS}
 
 config.h:
