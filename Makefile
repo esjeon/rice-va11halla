@@ -2,29 +2,27 @@
 
 include config.mk
 
-NAME=slstatus
+all: slstatus
 
-all: ${NAME}
-
-${NAME}: config.h config.mk
-	${CC} ${CFLAGS} -o $@ ${NAME}.c ${LDFLAGS}
+slstatus: config.h config.mk
+	${CC} ${CFLAGS} -o $@ slstatus.c ${LDFLAGS}
 
 config.h:
 	cp config.def.h $@
 
 clean:
-	rm -f ${NAME}
+	rm -f slstatus
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp -f ${NAME} ${DESTDIR}${PREFIX}/bin
-	chmod 755 ${DESTDIR}${PREFIX}/bin/${NAME}
+	cp -f slstatus ${DESTDIR}${PREFIX}/bin
+	chmod 755 ${DESTDIR}${PREFIX}/bin/slstatus
 	mkdir -p ${DESTDIR}${MANPREFIX}/man1
-	cp -f ${NAME}.1 ${DESTDIR}${MANPREFIX}/man1
-	chmod 644 ${DESTDIR}${MANPREFIX}/man1/${NAME}.1
+	cp -f slstatus.1 ${DESTDIR}${MANPREFIX}/man1
+	chmod 644 ${DESTDIR}${MANPREFIX}/man1/slstatus.1
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/${NAME}
-	rm -f ${DESTDIR}${MANPREFIX}/man1/${NAME}.1
+	rm -f ${DESTDIR}${PREFIX}/bin/slstatus
+	rm -f ${DESTDIR}${MANPREFIX}/man1/slstatus.1
 
 .PHONY: all clean install uninstall
