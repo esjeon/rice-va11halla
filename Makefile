@@ -6,6 +6,9 @@ NAME=slstatus
 
 all: ${NAME}
 
+${NAME}:
+	${CC} ${CFLAGS} -o $@ ${NAME}.c ${LDFLAGS}
+
 clean:
 	rm -f ${NAME}
 
