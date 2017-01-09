@@ -658,9 +658,7 @@ vol_perc(const char *card)
 	}
 
 	close(afd);
-	if (v == 0) {
-		return smprintf("mute");
-	}
+
 	return smprintf("%d%%", v & 0xff);
 }
 

@@ -4,7 +4,7 @@ include config.mk
 
 all: slstatus
 
-slstatus: config.h config.mk
+slstatus: slstatus.c config.h config.mk
 	${CC} ${CFLAGS} -o $@ slstatus.c ${LDFLAGS}
 
 config.h:
