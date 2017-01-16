@@ -47,6 +47,7 @@ static char *gid(void);
 static char *hostname(void);
 static char *ip(const char *iface);
 static char *kernel_release(void);
+static char *keyboard_indicators(void);
 static char *load_avg(void);
 static char *ram_free(void);
 static char *ram_perc(void);
@@ -320,6 +321,30 @@ kernel_release(void)
 	}
 
 	return smprintf("%s", udata.release);
+}
+
+static char *
+keyboard_indicators(void)
+{
+	Display *dpy = XOpenDisplay(NULL);
+	XKeyboardState state;
+	XGetKeyboardControl(dpy, &state);
+
+	switch (state.led_mask) {
+		case 1:
+			return smprintf("c");
+			break;
+		case 2:
+			return smprintf("n");
+			break;
+		case 3:
+			return smprintf("cn");
+			break;
+		default:
+			return smprintf("");
+	}
+
+	XCloseDisplay(dpy);
 }
 
 static char *

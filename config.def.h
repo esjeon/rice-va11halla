@@ -20,6 +20,7 @@
 - hostname [argument: NULL]
 - ip (ip address) [argument: interface]
 - kernel_release (uname -r) [argument: NULL]
+- keyboard_indicators (caps/num lock indicators) [agrument: NULL]
 - load_avg (load average) [argument: NULL]
 - ram_free (free ram in GB) [argument: NULL]
 - ram_perc (ram usage in percent) [argument: NULL]

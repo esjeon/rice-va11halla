@@ -18,6 +18,7 @@ The following information is included:
 - Hostname
 - IP addresses
 - Kernel version
+- Keyboard indicators
 - Load averages
 - Memory status (free memory, percentage, total memory and used memory)
 - Swap status (free swap, percentage, total swap and used swap)
