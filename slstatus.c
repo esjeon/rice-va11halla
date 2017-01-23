@@ -329,6 +329,7 @@ keyboard_indicators(void)
 	Display *dpy = XOpenDisplay(NULL);
 	XKeyboardState state;
 	XGetKeyboardControl(dpy, &state);
+	XCloseDisplay(dpy);
 
 	switch (state.led_mask) {
 		case 1:
@@ -343,8 +344,6 @@ keyboard_indicators(void)
 		default:
 			return smprintf("");
 	}
-
-	XCloseDisplay(dpy);
 }
 
 static char *
