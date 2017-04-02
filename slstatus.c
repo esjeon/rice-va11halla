@@ -447,9 +447,9 @@ run_command(const char *cmd)
 		warn("Failed to get command output for %s", cmd);
 		return smprintf("%s", UNKNOWN_STR);
 	}
-	fgets(buf, sizeof(buf), fp);
+	fgets(buf, sizeof(buf) - 1, fp);
 	pclose(fp);
-	buf[sizeof(buf)] = '\0';
+	buf[sizeof(buf) - 1] = '\0';
 
 	if ((nlptr = strstr(buf, "\n")) != NULL) {
 		nlptr[0] = '\0';
@@ -473,7 +473,7 @@ swap_free(void)
 		return smprintf("%s", UNKNOWN_STR);
 	}
 
-	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf) - 1, fp)) == 0) {
 		warn("swap_free: read error");
 		fclose(fp);
 		return smprintf("%s", UNKNOWN_STR);
@@ -510,7 +510,7 @@ swap_perc(void)
 		return smprintf("%s", UNKNOWN_STR);
 	}
 
-	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf) - 1, fp)) == 0) {
 		warn("swap_perc: read error");
 		fclose(fp);
 		return smprintf("%s", UNKNOWN_STR);
@@ -551,7 +551,7 @@ swap_total(void)
 		warn("Failed to open file /proc/meminfo");
 		return smprintf("%s", UNKNOWN_STR);
 	}
-	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf) - 1, fp)) == 0) {
 		warn("swap_total: read error");
 		fclose(fp);
 		return smprintf("%s", UNKNOWN_STR);
@@ -582,7 +582,7 @@ swap_used(void)
 		warn("Failed to open file /proc/meminfo");
 		return smprintf("%s", UNKNOWN_STR);
 	}
-	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf), fp)) == 0) {
+	if ((bytes_read = fread(buf, sizeof(char), sizeof(buf) - 1, fp)) == 0) {
 		warn("swap_used: read error");
 		fclose(fp);
 		return smprintf("%s", UNKNOWN_STR);
