@@ -447,7 +447,7 @@ run_command(const char *cmd)
 		warn("Failed to get command output for %s", cmd);
 		return smprintf("%s", UNKNOWN_STR);
 	}
-	fgets(buf, sizeof(buf) - 1, fp);
+	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
 	buf[sizeof(buf) - 1] = '\0';
 
