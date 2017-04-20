@@ -667,17 +667,23 @@ vol_perc(const char *card)
 	int v, afd, devmask;
 	char *vnames[] = SOUND_DEVICE_NAMES;
 
-	afd = open(card, O_RDONLY);
-	if (afd < 0) {
+	afd = open(card, O_RDONLY | O_NONBLOCK);
+	if (afd == -1) {
 		warn("Cannot open %s", card);
 		return smprintf(UNKNOWN_STR);
 	}
 
-	ioctl(afd, MIXER_READ(SOUND_MIXER_DEVMASK), &devmask);
+	if (ioctl(afd, SOUND_MIXER_READ_DEVMASK, &devmask) == -1) {
+		warn("Cannot get volume for %s", card);
+		close(afd);
+		return smprintf("%s", UNKNOWN_STR);
+	}
 	for (i = 0; i < (sizeof(vnames) / sizeof((vnames[0]))); i++) {
-		if (devmask & (1 << i)) {
-			if (!strcmp("vol", vnames[i])) {
-				ioctl(afd, MIXER_READ(i), &v);
+		if (devmask & (1 << i) && !strcmp("vol", vnames[i])) {
+			if (ioctl(afd, MIXER_READ(i), &v) == -1) {
+				warn("vol_perc: ioctl");
+				close(afd);
+				return smprintf("%s", UNKNOWN_STR);
 			}
 		}
 	}
