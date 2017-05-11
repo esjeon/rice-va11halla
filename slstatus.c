@@ -71,7 +71,7 @@ static void usage(const int eval);
 char *argv0;
 static unsigned short int delay = 0;
 static unsigned short int done;
-static unsigned short int dflag, oflag;
+static unsigned short int dflag, oflag, nflag;
 static Display *dpy;
 
 #include "config.h"
@@ -775,7 +775,7 @@ sighandler(const int signo)
 static void
 usage(const int eval)
 {
-	fprintf(stderr, "usage: %s [-d] [-o] [-v] [-h]\n", argv0);
+	fprintf(stderr, "usage: %s [-d] [-o] [-n] [-v] [-h]\n", argv0);
 	exit(eval);
 }
 
@@ -795,6 +795,9 @@ main(int argc, char *argv[])
 		case 'o':
 			oflag = 1;
 			break;
+		case 'n':
+			nflag = 1;
+			break;
 		case 'v':
 			printf("slstatus (C) 2016-2017 slstatus engineers\n");
 			return 0;
@@ -804,7 +807,7 @@ main(int argc, char *argv[])
 			usage(1);
 	} ARGEND
 
-	if (dflag && oflag) {
+	if ((dflag && oflag) || (dflag && nflag) || (oflag && nflag)) {
 		usage(1);
 	}
 	if (dflag && daemon(1, 1) < 0) {
@@ -842,11 +845,14 @@ main(int argc, char *argv[])
 			free(element);
 		}
 
-		if (!oflag) {
+		if (oflag) {
+			printf("%s\n", status_string);
+		} else if (nflag) {
+			printf("%s\n", status_string);
+			done = 1;
+		} else {
 			XStoreName(dpy, DefaultRootWindow(dpy), status_string);
 			XSync(dpy, False);
-		} else {
-			printf("%s\n", status_string);
 		}
 
 		if ((UPDATE_INTERVAL - delay) <= 0) {
