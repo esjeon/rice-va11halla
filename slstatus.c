@@ -99,7 +99,7 @@ bprintf(const char *fmt, ...)
 static const char *
 battery_perc(const char *bat)
 {
-	int perc;
+	int n, perc;
 	char path[PATH_MAX];
 	FILE *fp;
 
@@ -109,8 +109,10 @@ battery_perc(const char *bat)
 		warn("Failed to open file %s", path);
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%i", &perc);
+	n = fscanf(fp, "%i", &perc);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	return bprintf("%d", perc);
 }
@@ -120,7 +122,7 @@ battery_power(const char *bat)
 {
 	char path[PATH_MAX];
 	FILE *fp;
-	int watts;
+	int n, watts;
 
 	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/power_now");
 	fp = fopen(path, "r");
@@ -128,8 +130,10 @@ battery_power(const char *bat)
 		warn("Failed to open file %s", path);
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%i", &watts);
+	n = fscanf(fp, "%i", &watts);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	return bprintf("%d", (watts + 500000) / 1000000);
 }
@@ -140,6 +144,7 @@ battery_state(const char *bat)
 	char path[PATH_MAX];
 	char state[12];
 	FILE *fp;
+	int n;
 
 	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/status");
 	fp = fopen(path, "r");
@@ -147,8 +152,10 @@ battery_state(const char *bat)
 		warn("Failed to open file %s", path);
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%12s", state);
+	n = fscanf(fp, "%12s", state);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	if (strcmp(state, "Charging") == 0) {
 		return "+";
@@ -166,7 +173,7 @@ battery_state(const char *bat)
 static const char *
 cpu_freq(void)
 {
-	int freq;
+	int n, freq;
 	FILE *fp;
 
 	fp = fopen("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r");
@@ -174,8 +181,10 @@ cpu_freq(void)
 		warn("Failed to open file /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%i", &freq);
+	n = fscanf(fp, "%i", &freq);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	return bprintf("%d", (freq + 500) / 1000);
 }
@@ -183,7 +192,7 @@ cpu_freq(void)
 static const char *
 cpu_perc(void)
 {
-	int perc;
+	int n, perc;
 	long double a[4], b[4];
 	FILE *fp;
 
@@ -192,8 +201,10 @@ cpu_perc(void)
 		warn("Failed to open file /proc/stat");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2], &a[3]);
+	n = fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2], &a[3]);
 	fclose(fp);
+	if (n != 4)
+		return UNKNOWN_STR;
 
 	delay++;
 	sleep(delay);
@@ -203,8 +214,10 @@ cpu_perc(void)
 		warn("Failed to open file /proc/stat");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &b[0], &b[1], &b[2], &b[3]);
+	n = fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &b[0], &b[1], &b[2], &b[3]);
 	fclose(fp);
+	if (n != 4)
+		return UNKNOWN_STR;
 
 	perc = 100 * ((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3]));
 	return bprintf("%d", perc);
@@ -280,7 +293,7 @@ disk_used(const char *mnt)
 static const char *
 entropy(void)
 {
-	int num;
+	int n, num;
 	FILE *fp;
 
 	fp= fopen("/proc/sys/kernel/random/entropy_avail", "r");
@@ -288,8 +301,10 @@ entropy(void)
 		warn("Failed to open file /proc/sys/kernel/random/entropy_avail");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%d", &num);
+	n = fscanf(fp, "%d", &num);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	return bprintf("%d", num);
 }
@@ -392,14 +407,17 @@ ram_free(void)
 {
 	long free;
 	FILE *fp;
+	int n;
 
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "MemFree: %ld kB\n", &free);
+	n = fscanf(fp, "MemFree: %ld kB\n", &free);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	return bprintf("%f", (float)free / 1024 / 1024);
 }
@@ -415,13 +433,19 @@ ram_perc(void)
 		warn("Failed to open file /proc/meminfo");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "MemTotal: %ld kB\n", &total);
-	fscanf(fp, "MemFree: %ld kB\n", &free);
-	fscanf(fp, "MemAvailable: %ld kB\nBuffers: %ld kB\n", &buffers, &buffers);
-	fscanf(fp, "Cached: %ld kB\n", &cached);
+	if (fscanf(fp, "MemTotal: %ld kB\n", &total) != 1 ||
+	    fscanf(fp, "MemFree: %ld kB\n", &free) != 1 ||
+	    fscanf(fp, "MemAvailable: %ld kB\nBuffers: %ld kB\n",
+	           &buffers, &buffers) != 2 ||
+	    fscanf(fp, "Cached: %ld kB\n", &cached) != 1)
+		goto scanerr;
 	fclose(fp);
 
 	return bprintf("%d", 100 * ((total - free) - (buffers + cached)) / total);
+
+scanerr:
+	fclose(fp);
+	return UNKNOWN_STR;
 }
 
 static const char *
@@ -429,14 +453,17 @@ ram_total(void)
 {
 	long total;
 	FILE *fp;
+	int n;
 
 	fp = fopen("/proc/meminfo", "r");
 	if (fp == NULL) {
 		warn("Failed to open file /proc/meminfo");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "MemTotal: %ld kB\n", &total);
+	n = fscanf(fp, "MemTotal: %ld kB\n", &total);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	return bprintf("%f", (float)total / 1024 / 1024);
 }
@@ -452,19 +479,25 @@ ram_used(void)
 		warn("Failed to open file /proc/meminfo");
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "MemTotal: %ld kB\n", &total);
-	fscanf(fp, "MemFree: %ld kB\n", &free);
-	fscanf(fp, "MemAvailable: %ld kB\nBuffers: %ld kB\n", &buffers, &buffers);
-	fscanf(fp, "Cached: %ld kB\n", &cached);
+	if (fscanf(fp, "MemTotal: %ld kB\n", &total) != 1 ||
+	    fscanf(fp, "MemFree: %ld kB\n", &free) != 1 ||
+	    fscanf(fp, "MemAvailable: %ld kB\nBuffers: %ld kB\n",
+	           &buffers, &buffers) != 2 ||
+	    fscanf(fp, "Cached: %ld kB\n", &cached) != 1)
+		goto scanerr;
 	fclose(fp);
 
 	return bprintf("%f", (float)(total - free - buffers - cached) / 1024 / 1024);
+
+scanerr:
+	fclose(fp);
+	return UNKNOWN_STR;
 }
 
 static const char *
 run_command(const char *cmd)
 {
-	char *nlptr;
+	char *p;
 	FILE *fp;
 
 	fp = popen(cmd, "r");
@@ -472,10 +505,12 @@ run_command(const char *cmd)
 		warn("Failed to get command output for %s", cmd);
 		return UNKNOWN_STR;
 	}
-	fgets(buf, sizeof(buf) - 1, fp);
+	p = fgets(buf, sizeof(buf) - 1, fp);
 	pclose(fp);
-	if ((nlptr = strrchr(buf, '\n')) != NULL)
-		nlptr[0] = '\0';
+	if (!p)
+		return UNKNOWN_STR;
+	if ((p = strrchr(buf, '\n')) != NULL)
+		p[0] = '\0';
 
 	return buf[0] ? buf : UNKNOWN_STR;
 }
@@ -613,7 +648,7 @@ swap_used(void)
 static const char *
 temp(const char *file)
 {
-	int temp;
+	int n, temp;
 	FILE *fp;
 
 	fp = fopen(file, "r");
@@ -621,8 +656,10 @@ temp(const char *file)
 		warn("Failed to open file %s", file);
 		return UNKNOWN_STR;
 	}
-	fscanf(fp, "%d", &temp);
+	n = fscanf(fp, "%d", &temp);
 	fclose(fp);
+	if (n != 1)
+		return UNKNOWN_STR;
 
 	return bprintf("%d", temp / 1000);
 }
@@ -697,8 +734,8 @@ vol_perc(const char *card)
 static const char *
 wifi_perc(const char *iface)
 {
-	int perc;
-	char *datastart;
+	int i, perc;
+	char *p, *datastart;
 	char path[PATH_MAX];
 	char status[5];
 	FILE *fp;
@@ -709,9 +746,9 @@ wifi_perc(const char *iface)
 		warn("Failed to open file %s", path);
 		return UNKNOWN_STR;
 	}
-	fgets(status, 5, fp);
+	p = fgets(status, 5, fp);
 	fclose(fp);
-	if(strcmp(status, "up\n") != 0) {
+	if(!p || strcmp(status, "up\n") != 0) {
 		return UNKNOWN_STR;
 	}
 
@@ -721,10 +758,13 @@ wifi_perc(const char *iface)
 		return UNKNOWN_STR;
 	}
 
-	fgets(buf, sizeof(buf) - 1, fp);
-	fgets(buf, sizeof(buf) - 1, fp);
-	fgets(buf, sizeof(buf) - 1, fp);
+	for (i = 0; i < 3; i++) {
+		if (!(p = fgets(buf, sizeof(buf) - 1, fp)))
+			break;
+	}
 	fclose(fp);
+	if (i < 2 || !p)
+		return UNKNOWN_STR;
 
 	if ((datastart = strstr(buf, iface)) == NULL)
 		return UNKNOWN_STR;
