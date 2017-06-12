@@ -117,7 +117,7 @@ battery_perc(const char *bat)
 	fscanf(fp, "%i", &perc);
 	fclose(fp);
 
-	return smprintf("%d%%", perc);
+	return smprintf("%d", perc);
 }
 
 static char *
@@ -212,7 +212,7 @@ cpu_perc(void)
 	fclose(fp);
 
 	perc = 100 * ((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3]));
-	return smprintf("%d%%", perc);
+	return smprintf("%d", perc);
 }
 
 static char *
@@ -255,7 +255,7 @@ disk_perc(const char *mnt)
 
 	perc = 100 * (1.0f - ((float)fs.f_bfree / (float)fs.f_blocks));
 
-	return smprintf("%d%%", perc);
+	return smprintf("%d", perc);
 }
 
 static char *
@@ -433,7 +433,7 @@ ram_perc(void)
 	fscanf(fp, "Cached: %ld kB\n", &cached);
 	fclose(fp);
 
-	return smprintf("%d%%", 100 * ((total - free) - (buffers + cached)) / total);
+	return smprintf("%d", 100 * ((total - free) - (buffers + cached)) / total);
 }
 
 static char *
@@ -572,7 +572,7 @@ swap_perc(void)
 	}
 	sscanf(match, "SwapFree: %ld kB\n", &free);
 
-	return smprintf("%d%%", 100 * (total - free - cached) / total);
+	return smprintf("%d", 100 * (total - free - cached) / total);
 }
 
 static char *
@@ -661,7 +661,7 @@ temp(const char *file)
 	fscanf(fp, "%d", &temp);
 	fclose(fp);
 
-	return smprintf("%d°C", temp / 1000);
+	return smprintf("%d", temp / 1000);
 }
 
 static char *
@@ -728,7 +728,7 @@ vol_perc(const char *card)
 
 	close(afd);
 
-	return smprintf("%d%%", v & 0xff);
+	return smprintf("%d", v & 0xff);
 }
 
 static char *
@@ -770,7 +770,7 @@ wifi_perc(const char *iface)
 	datastart = (datastart+(strlen(iface)+1));
 	sscanf(datastart + 1, " %*d   %d  %*d  %*d		  %*d	   %*d		%*d		 %*d	  %*d		 %*d", &perc);
 
-	return smprintf("%d%%", perc);
+	return smprintf("%d", perc);
 }
 
 static char *
