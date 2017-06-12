@@ -11,6 +11,7 @@
 - battery_power (battery power usage) [argument: battery name]
 - battery_state (battery charging state) [argument: battery name]
 - cpu_perc (cpu usage in percent) [argument: NULL]
+- cpu_freq (cpu frequency) [argument: NULL]
 - datetime (date and time) [argument: format]
 - disk_free (free disk space in GB) [argument: mountpoint]
 - disk_perc (disk usage in percent) [argument: mountpoint]

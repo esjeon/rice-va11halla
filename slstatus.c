@@ -37,6 +37,7 @@ static char *smprintf(const char *fmt, ...);
 static char *battery_perc(const char *bat);
 static char *battery_power(const char *bat);
 static char *battery_state(const char *bat);
+static char *cpu_freq(void);
 static char *cpu_perc(void);
 static char *datetime(const char *fmt);
 static char *disk_free(const char *mnt);
@@ -165,6 +166,23 @@ battery_state(const char *bat)
 	} else {
 		return smprintf("?");
 	}
+}
+
+static char *
+cpu_freq(void)
+{
+	int freq;
+	FILE *fp;
+
+	fp = fopen("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r");
+	if (fp == NULL) {
+		warn("Failed to open file /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
+		return smprintf("%s", UNKNOWN_STR);
+	}
+	fscanf(fp, "%i", &freq);
+	fclose(fp);
+
+	return smprintf("%d", (freq + 500) / 1000);
 }
 
 static char *
