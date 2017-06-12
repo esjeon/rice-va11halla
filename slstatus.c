@@ -35,6 +35,7 @@ struct arg {
 
 static char *smprintf(const char *fmt, ...);
 static char *battery_perc(const char *bat);
+static char *battery_power(const char *bat);
 static char *battery_state(const char *bat);
 static char *cpu_perc(void);
 static char *datetime(const char *fmt);
@@ -116,6 +117,25 @@ battery_perc(const char *bat)
 	fclose(fp);
 
 	return smprintf("%d%%", perc);
+}
+
+static char *
+battery_power(const char *bat)
+{
+	char path[PATH_MAX];
+	FILE *fp;
+	int watts;
+
+	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/power_now");
+	fp = fopen(path, "r");
+	if (fp == NULL) {
+		warn("Failed to open file %s", path);
+		return smprintf("%s", UNKNOWN_STR);
+	}
+	fscanf(fp, "%i", &watts);
+	fclose(fp);
+
+	return smprintf("%d", (watts + 500000) / 1000000);
 }
 
 static char *
