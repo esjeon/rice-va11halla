@@ -21,6 +21,7 @@ The following information is included:
 - Kernel version
 - Keyboard indicators
 - Load averages
+- Number of files in a directory (hint: Maildir)
 - Memory status (free memory, percentage, total memory and used memory)
 - Swap status (free swap, percentage, total swap and used swap)
 - Temperature

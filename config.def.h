@@ -27,6 +27,7 @@
 - kernel_release (uname -r) [argument: NULL]
 - keyboard_indicators (caps/num lock indicators) [agrument: NULL]
 - load_avg (load average) [argument: NULL]
+- num_files (number of files in a directory - hint: maildir) [argument: path]
 - ram_free (free ram in GB) [argument: NULL]
 - ram_perc (ram usage in percent) [argument: NULL]
 - ram_total (total ram in GB) [argument: NULL]

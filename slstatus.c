@@ -1,5 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 
+#include <dirent.h>
 #include <err.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
@@ -51,6 +52,7 @@ static const char *ip(const char *iface);
 static const char *kernel_release(void);
 static const char *keyboard_indicators(void);
 static const char *load_avg(void);
+static const char *num_files(const char *dir);
 static const char *ram_free(void);
 static const char *ram_perc(void);
 static const char *ram_used(void);
@@ -400,6 +402,29 @@ load_avg(void)
 	}
 
 	return bprintf("%.2f %.2f %.2f", avgs[0], avgs[1], avgs[2]);
+}
+
+static const char *
+num_files(const char *dir)
+{
+	struct dirent *dp;
+	DIR *fd;
+	int num = 0;
+
+	if ((fd = opendir(dir)) == NULL) {
+		warn("Failed to get number of files in directory %s", dir);
+		return UNKNOWN_STR;
+	}
+
+	while ((dp = readdir(fd)) != NULL) {
+		if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, ".."))
+			continue; /* skip self and parent */
+		num++;
+	}
+
+	closedir(fd);
+
+	return bprintf("%d", num);
 }
 
 static const char *
