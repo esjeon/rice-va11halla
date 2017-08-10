@@ -75,7 +75,6 @@ static void usage(void);
 char *argv0;
 static unsigned short int delay = 0;
 static unsigned short int done;
-static unsigned short int oflag, nflag;
 static Display *dpy;
 
 #include "config.h"
@@ -840,41 +839,34 @@ sighandler(const int signo)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-o | -n]\n", argv0);
+	fprintf(stderr, "usage: %s [-s]\n", argv0);
 	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-	unsigned short int i;
-	char status_string[MAXLEN];
-	char *element;
 	struct arg argument;
 	struct sigaction act;
-	size_t len;
+	size_t i, len;
+	int sflag = 0;
+	char status_string[MAXLEN];
+	char *element;
 
 	ARGBEGIN {
-		case 'o':
-			oflag = 1;
-			break;
-		case 'n':
-			nflag = 1;
+		case 's':
+			sflag = 1;
 			break;
 		default:
 			usage();
 	} ARGEND
-
-	if (oflag && nflag) {
-		usage();
-	}
 
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sighandler;
 	sigaction(SIGINT,  &act, 0);
 	sigaction(SIGTERM, &act, 0);
 
-	if (!oflag) {
+	if (!sflag) {
 		dpy = XOpenDisplay(NULL);
 	}
 
@@ -896,11 +888,8 @@ main(int argc, char *argv[])
 			}
 		}
 
-		if (oflag) {
+		if (sflag) {
 			printf("%s\n", status_string);
-		} else if (nflag) {
-			printf("%s\n", status_string);
-			done = 1;
 		} else {
 			XStoreName(dpy, DefaultRootWindow(dpy), status_string);
 			XSync(dpy, False);
@@ -915,7 +904,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (!oflag) {
+	if (!sflag) {
 		XStoreName(dpy, DefaultRootWindow(dpy), NULL);
 		XCloseDisplay(dpy);
 	}
