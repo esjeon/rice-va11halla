@@ -1,18 +1,20 @@
-# See LICENSE file for copyright and license details.
+# slstatus version
+VERSION = 0
 
+# Customize below to fit your system
+
+#paths
 PREFIX = /usr/local
-MANPREFIX = ${PREFIX}/share/man
+MANPREFIX = ${PREFIX}/man
 
 X11INC = /usr/X11R6/include
 X11LIB = /usr/X11R6/lib
 
-INCS = -I/usr/include -I${X11INC}
-LIBS = -L/usr/lib -lc -L${X11LIB} -lX11
+# flags
+CPPFLAGS = -I$(X11INC) -DVERSION=\"$(VERSION)\" -D_DEFAULT_SOURCE
+CFLAGS   = -std=c99 -pedantic -Wall -Wextra -Wno-unused -Os
+LDFLAGS  = -L$(X11LIB) -s
+LDLIBS   = -lX11
 
-CPPFLAGS = -D_GNU_SOURCE
-# -Wno-unused-function for routines not activated by user
-CFLAGS = -std=c99 -pedantic -Wno-unused-function -Wall -Wextra -Os -fstack-protector-strong -fstack-check -fPIE ${INCS} ${CPPFLAGS}
-LDFLAGS = ${LIBS}
-
+# compiler and linker
 CC = cc
-LD = ld
