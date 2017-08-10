@@ -70,7 +70,7 @@ static const char *vol_perc(const char *card);
 static const char *wifi_perc(const char *iface);
 static const char *wifi_essid(const char *iface);
 static void sighandler(const int signo);
-static void usage(const int eval);
+static void usage(void);
 
 char *argv0;
 static unsigned short int delay = 0;
@@ -838,10 +838,10 @@ sighandler(const int signo)
 }
 
 static void
-usage(const int eval)
+usage(void)
 {
 	fprintf(stderr, "usage: %s [-d] [-o] [-n] [-v] [-h]\n", argv0);
-	exit(eval);
+	exit(1);
 }
 
 int
@@ -865,16 +865,14 @@ main(int argc, char *argv[])
 			nflag = 1;
 			break;
 		case 'v':
-			printf("slstatus (C) 2016-2017 slstatus engineers\n");
+			printf("slstatus-"VERSION"\n");
 			return 0;
-		case 'h':
-			usage(0);
 		default:
-			usage(1);
+			usage();
 	} ARGEND
 
 	if ((dflag && oflag) || (dflag && nflag) || (oflag && nflag)) {
-		usage(1);
+		usage();
 	}
 	if (dflag && daemon(1, 1) < 0) {
 		err(1, "daemon");
