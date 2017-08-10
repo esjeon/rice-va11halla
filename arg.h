@@ -1,55 +1,34 @@
-/*
- * Copy me if you can.
- * by 20h
- */
+/* See LICENSE file for copyright and license details. */
 
-#ifndef __ARG_H__
-#define __ARG_H__
+#ifndef ARG_H
+#define ARG_H
 
 extern char *argv0;
 
-#define USED(x)		((void)(x))
-
-/* use main(int argc, char *argv[]) */
-#define ARGBEGIN	for (argv0 = *argv, argv++, argc--;\
-					argv[0] && argv[0][1]\
-					&& argv[0][0] == '-';\
-					argc--, argv++) {\
-				char _argc;\
-				char **_argv;\
-				int brk;\
-				if (argv[0][1] == '-' && argv[0][2] == '\0') {\
-					argv++;\
-					argc--;\
-					break;\
-				}\
-				for (brk = 0, argv[0]++, _argv = argv;\
-						argv[0][0] && !brk;\
-						argv[0]++) {\
-					if (_argv != argv)\
-						break;\
-					_argc = argv[0][0];\
-					switch (_argc)
-
-#define ARGEND			}\
-				USED(_argc);\
-			}\
-			USED(argv);\
-			USED(argc);
-
-#define ARGC()		_argc
-
-#define EARGF(x)	((argv[0][1] == '\0' && argv[1] == NULL)?\
-				((x), abort(), (char *)0) :\
-				(brk = 1, (argv[0][1] != '\0')?\
-					(&argv[0][1]) :\
-					(argc--, argv++, argv[0])))
-
-#define ARGF()		((argv[0][1] == '\0' && argv[1] == NULL)?\
-				(char *)0 :\
-				(brk = 1, (argv[0][1] != '\0')?\
-					(&argv[0][1]) :\
-					(argc--, argv++, argv[0])))
+/* int main(int argc, char *argv[]) */
+#define ARGBEGIN for (argv0 = *argv, *argv ? (argc--, argv++) : ((void *)0);      \
+                      *argv && (*argv)[0] == '-' && (*argv)[1]; argc--, argv++) { \
+                 	int i_, argused_;                                         \
+                 	if ((*argv)[1] == '-' && !(*argv)[2]) {                   \
+                 		argc--, argv++;                                   \
+                 		break;                                            \
+                 	}                                                         \
+                 	for (i_ = 1, argused_ = 0; (*argv)[i_]; i_++) {           \
+                 		switch((*argv)[i_])
+#define ARGEND   		if (argused_) {                                   \
+                 			if ((*argv)[i_ + 1]) {                    \
+                 				break;                            \
+                 			} else {                                  \
+                 				argc--, argv++;                   \
+                 				break;                            \
+                 			}                                         \
+                 		}                                                 \
+                 	}                                                         \
+                 }
+#define ARGC()   ((*argv)[i_])
+#define ARGF_(x) (((*argv)[i_ + 1]) ? (argused_ = 1, &((*argv)[i_ + 1])) :        \
+                  (*(argv + 1))     ? (argused_ = 1, *(argv + 1))        : (x))
+#define EARGF(x) ARGF_(((x), exit(1), (char *)0))
+#define ARGF()   ARGF_((char *)0)
 
 #endif
-
