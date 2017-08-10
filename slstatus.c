@@ -861,6 +861,10 @@ main(int argc, char *argv[])
 			usage();
 	} ARGEND
 
+	if (argc) {
+		usage();
+	}
+
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = sighandler;
 	sigaction(SIGINT,  &act, 0);
