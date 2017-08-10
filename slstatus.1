@@ -6,14 +6,7 @@
 .Nd suckless status monitor
 .Sh SYNOPSIS
 .Nm
-.Oo
-.Op Fl v
-|
-.Oo
-.Op Fl d
 .Op Fl o | n
-.Oc
-.Oc
 .Sh DESCRIPTION
 .Nm
 is a suckless status monitor for window managers that use WM_NAME (e.g. dwm) or
@@ -23,14 +16,10 @@ By default,
 outputs to WM_NAME.
 .Sh OPTIONS
 .Bl -tag -width Ds
-.It Fl d
-Daemonize.
 .It Fl n
 Write to stdout once and exit.
 .It Fl o
 Write to stdout continuously.
-.It Fl v
-Write version information to stdout and exit.
 .El
 .Sh CUSTOMIZATION
 .Nm

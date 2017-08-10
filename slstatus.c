@@ -75,7 +75,7 @@ static void usage(void);
 char *argv0;
 static unsigned short int delay = 0;
 static unsigned short int done;
-static unsigned short int dflag, oflag, nflag;
+static unsigned short int oflag, nflag;
 static Display *dpy;
 
 #include "config.h"
@@ -840,7 +840,7 @@ sighandler(const int signo)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-d] [-o] [-n] [-v] [-h]\n", argv0);
+	fprintf(stderr, "usage: %s [-o | -n]\n", argv0);
 	exit(1);
 }
 
@@ -855,27 +855,18 @@ main(int argc, char *argv[])
 	size_t len;
 
 	ARGBEGIN {
-		case 'd':
-			dflag = 1;
-			break;
 		case 'o':
 			oflag = 1;
 			break;
 		case 'n':
 			nflag = 1;
 			break;
-		case 'v':
-			printf("slstatus-"VERSION"\n");
-			return 0;
 		default:
 			usage();
 	} ARGEND
 
-	if ((dflag && oflag) || (dflag && nflag) || (oflag && nflag)) {
+	if (oflag && nflag) {
 		usage();
-	}
-	if (dflag && daemon(1, 1) < 0) {
-		err(1, "daemon");
 	}
 
 	memset(&act, 0, sizeof(act));
