@@ -142,10 +142,19 @@ battery_power(const char *bat)
 static const char *
 battery_state(const char *bat)
 {
-	char path[PATH_MAX];
-	char state[12];
 	FILE *fp;
+	struct {
+		char *state;
+		char *symbol;
+	} map[] = {
+		{ "Charging",    "+" },
+		{ "Discharging", "-" },
+		{ "Full",        "=" },
+		{ "Unknown",     "/" },
+	};
+	size_t i;
 	int n;
+	char path[PATH_MAX], state[12];
 
 	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/status");
 	fp = fopen(path, "r");
@@ -158,17 +167,13 @@ battery_state(const char *bat)
 	if (n != 1)
 		return UNKNOWN_STR;
 
-	if (strcmp(state, "Charging") == 0) {
-		return "+";
-	} else if (strcmp(state, "Discharging") == 0) {
-		return "-";
-	} else if (strcmp(state, "Full") == 0) {
-		return "=";
-	} else if (strcmp(state, "Unknown") == 0) {
-		return "/";
-	} else {
-		return "?";
+	for (i = 0; i < sizeof(map) / sizeof(*map); i++) {
+		if (!strcmp(map[i].state, state)) {
+			break;
+		}
 	}
+
+	return (i == sizeof(map) / sizeof(*map)) ? "?" : map[i].symbol;
 }
 
 static const char *
