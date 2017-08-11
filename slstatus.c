@@ -380,10 +380,9 @@ kernel_release(void)
 static const char *
 keyboard_indicators(void)
 {
-	Display *dpy = XOpenDisplay(NULL);
 	XKeyboardState state;
+
 	XGetKeyboardControl(dpy, &state);
-	XCloseDisplay(dpy);
 
 	switch (state.led_mask) {
 		case 1:
@@ -879,6 +878,10 @@ main(int argc, char *argv[])
 
 	if (!sflag) {
 		dpy = XOpenDisplay(NULL);
+		if (!dpy) {
+			fprintf(stderr, "slstatus: cannot open display");
+			exit(1);
+		}
 	}
 
 	setlocale(LC_ALL, "");
