@@ -28,6 +28,8 @@
 
 #include "arg.h"
 
+#define LEN(x) (sizeof (x) / sizeof *(x))
+
 struct arg {
 	const char *(*func)();
 	const char *fmt;
@@ -167,13 +169,13 @@ battery_state(const char *bat)
 	if (n != 1)
 		return UNKNOWN_STR;
 
-	for (i = 0; i < sizeof(map) / sizeof(*map); i++) {
+	for (i = 0; i < LEN(map); i++) {
 		if (!strcmp(map[i].state, state)) {
 			break;
 		}
 	}
 
-	return (i == sizeof(map) / sizeof(*map)) ? "?" : map[i].symbol;
+	return (i == LEN(map)) ? "?" : map[i].symbol;
 }
 
 static const char *
@@ -745,7 +747,7 @@ vol_perc(const char *card)
 		close(afd);
 		return UNKNOWN_STR;
 	}
-	for (i = 0; i < (sizeof(vnames) / sizeof((vnames[0]))); i++) {
+	for (i = 0; i < LEN(vnames); i++) {
 		if (devmask & (1 << i) && !strcmp("vol", vnames[i])) {
 			if (ioctl(afd, MIXER_READ(i), &v) == -1) {
 				warn("vol_perc: ioctl");
@@ -884,8 +886,7 @@ main(int argc, char *argv[])
 	while (!done) {
 		status_string[0] = '\0';
 
-		for (element = status_string, i = len = 0;
-		     i < sizeof(args) / sizeof(args[0]);
+		for (element = status_string, i = len = 0; i < LEN(args);
 		     ++i, element += len) {
 			argument = args[i];
 			len = snprintf(element, sizeof(status_string)-1 - len,
