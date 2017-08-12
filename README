@@ -39,8 +39,8 @@ Installation
 Edit config.mk to match your local setup (slstatus is installed into the
 /usr/local namespace by default).
 
-Afterwards enter the following command to build and install dmenu (if necessary
-as root):
+Afterwards enter the following command to build and install slstatus (if
+necessary as root):
 
     make clean install
 
