@@ -914,11 +914,11 @@ main(int argc, char *argv[])
 			XSync(dpy, False);
 		}
 
-		if ((UPDATE_INTERVAL - delay) <= 0) {
+		if ((update_interval - delay) <= 0) {
 			delay = 0;
 			continue;
 		} else {
-			sleep(UPDATE_INTERVAL - delay);
+			sleep(update_interval - delay);
 			delay = 0;
 		}
 	}

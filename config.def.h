@@ -1,7 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 
 /* how often to update the statusbar (min value == 1) */
-#define UPDATE_INTERVAL 1
+static const int update_interval = 1;
 
 /* text to show if no value can be retrieved */
 #define UNKNOWN_STR "n/a"
