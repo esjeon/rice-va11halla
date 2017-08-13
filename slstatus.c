@@ -35,7 +35,6 @@ struct arg {
 	const char *args;
 };
 
-static const char *bprintf(const char *fmt, ...);
 static const char *battery_perc(const char *bat);
 static const char *battery_power(const char *bat);
 static const char *battery_state(const char *bat);
@@ -70,8 +69,6 @@ static const char *username(void);
 static const char *vol_perc(const char *card);
 static const char *wifi_perc(const char *iface);
 static const char *wifi_essid(const char *iface);
-static void sighandler(const int signo);
-static void usage(void);
 
 char *argv0;
 static unsigned short int delay = 0;
