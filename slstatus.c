@@ -5,7 +5,6 @@
 #include <ifaddrs.h>
 #include <limits.h>
 #include <linux/wireless.h>
-#include <locale.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <signal.h>
@@ -71,7 +70,6 @@ static const char *wifi_perc(const char *iface);
 static const char *wifi_essid(const char *iface);
 
 char *argv0;
-static unsigned short int delay = 0;
 static unsigned short int done;
 static Display *dpy;
 
@@ -196,6 +194,7 @@ cpu_freq(void)
 static const char *
 cpu_perc(void)
 {
+	struct timespec delay;
 	int n, perc;
 	long double a[4], b[4];
 	FILE *fp;
@@ -210,8 +209,9 @@ cpu_perc(void)
 	if (n != 4)
 		return unknown_str;
 
-	delay++;
-	sleep(delay);
+	delay.tv_sec = (interval / 2) / 1000;
+	delay.tv_nsec = ((interval / 2) % 1000) * 1000000;
+	nanosleep(&delay, NULL);
 
 	fp = fopen("/proc/stat", "r");
 	if (fp == NULL) {
@@ -843,6 +843,14 @@ terminate(const int signo)
 }
 
 static void
+difftimespec(struct timespec *res, struct timespec *a, struct timespec *b)
+{
+	res->tv_sec = a->tv_sec - b->tv_sec - (a->tv_nsec < b->tv_nsec);
+	res->tv_nsec = a->tv_nsec - b->tv_nsec +
+	               (a->tv_nsec < b->tv_nsec) * 1000000000;
+}
+
+static void
 usage(void)
 {
 	fprintf(stderr, "usage: %s [-s]\n", argv0);
@@ -852,12 +860,11 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	struct arg argument;
 	struct sigaction act;
+	struct timespec start, current, diff, intspec, wait;
 	size_t i, len;
 	int sflag = 0;
-	char status_string[MAXLEN];
-	char *element;
+	char status[MAXLEN];
 
 	ARGBEGIN {
 		case 's':
@@ -876,44 +883,42 @@ main(int argc, char *argv[])
 	sigaction(SIGINT,  &act, NULL);
 	sigaction(SIGTERM, &act, NULL);
 
-	if (!sflag) {
-		dpy = XOpenDisplay(NULL);
-		if (!dpy) {
-			fprintf(stderr, "slstatus: cannot open display");
-			exit(1);
-		}
+	if (!sflag && !(dpy = XOpenDisplay(NULL))) {
+		fprintf(stderr, "slstatus: cannot open display");
+		return 1;
 	}
 
-	setlocale(LC_ALL, "");
-
 	while (!done) {
-		status_string[0] = '\0';
+		clock_gettime(CLOCK_MONOTONIC, &start);
 
-		for (element = status_string, i = len = 0; i < LEN(args);
-		     ++i, element += len) {
-			argument = args[i];
-			len = snprintf(element, sizeof(status_string)-1 - len,
-			               argument.fmt,
-			               argument.func(argument.args));
-			if (len >= sizeof(status_string)) {
-				status_string[sizeof(status_string)-1] = '\0';
-				break;
+		status[0] = '\0';
+		for (i = len = 0; i < LEN(args); i++) {
+			len += snprintf(status + len, sizeof(status) - len,
+			                args[i].fmt, args[i].func(args[i].args));
+
+			if (len >= sizeof(status)) {
+				status[sizeof(status) - 1] = '\0';
 			}
 		}
 
 		if (sflag) {
-			printf("%s\n", status_string);
+			printf("%s\n", status);
 		} else {
-			XStoreName(dpy, DefaultRootWindow(dpy), status_string);
+			XStoreName(dpy, DefaultRootWindow(dpy), status);
 			XSync(dpy, False);
 		}
 
-		if ((update_interval - delay) <= 0) {
-			delay = 0;
-			continue;
-		} else {
-			sleep(update_interval - delay);
-			delay = 0;
+		if (!done) {
+			clock_gettime(CLOCK_MONOTONIC, &current);
+			difftimespec(&diff, &current, &start);
+
+			intspec.tv_sec = interval / 1000;
+			intspec.tv_nsec = (interval % 1000) * 1000000;
+			difftimespec(&wait, &intspec, &diff);
+
+			if (wait.tv_sec >= 0) {
+				nanosleep(&wait, NULL);
+			}
 		}
 	}
 
