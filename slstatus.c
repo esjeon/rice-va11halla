@@ -837,11 +837,9 @@ wifi_essid(const char *iface)
 }
 
 static void
-sighandler(const int signo)
+terminate(const int signo)
 {
-	if (signo == SIGTERM || signo == SIGINT) {
-		done = 1;
-	}
+	done = 1;
 }
 
 static void
@@ -874,9 +872,9 @@ main(int argc, char *argv[])
 	}
 
 	memset(&act, 0, sizeof(act));
-	act.sa_handler = sighandler;
-	sigaction(SIGINT,  &act, 0);
-	sigaction(SIGTERM, &act, 0);
+	act.sa_handler = terminate;
+	sigaction(SIGINT,  &act, NULL);
+	sigaction(SIGTERM, &act, NULL);
 
 	if (!sflag) {
 		dpy = XOpenDisplay(NULL);
