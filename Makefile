@@ -15,6 +15,14 @@ config.h:
 clean:
 	rm -f slstatus
 
+dist:
+	rm -rf "slstatus-$(VERSION)"
+	mkdir -p "slstatus-$(VERSION)"
+	cp -R arg.h config.def.h config.mk LICENSE Makefile README slstatus.1 \
+		slstatus.c slstatus.png "slstatus-$(VERSION)"
+	tar -cf - "slstatus-$(VERSION)" | gzip -c > "slstatus-$(VERSION).tar.gz"
+	rm -rf "slstatus-$(VERSION)"
+
 install: all
 	mkdir -p "$(DESTDIR)$(PREFIX)/bin"
 	cp -f slstatus "$(DESTDIR)$(PREFIX)/bin"
