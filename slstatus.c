@@ -1,6 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 #include <dirent.h>
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <limits.h>
@@ -93,52 +94,50 @@ bprintf(const char *fmt, ...)
 	return buf;
 }
 
+int
+pscanf(const char *path, const char *fmt, ...)
+{
+	FILE *fp;
+	va_list ap;
+	int n;
+
+	if (!(fp = fopen(path, "r"))) {
+		warn("fopen %s: %s\n", path, strerror(errno));
+		return -1;
+	}
+	va_start(ap, fmt);
+	n = vfscanf(fp, fmt, ap);
+	va_end(ap);
+	fclose(fp);
+
+	return (n == EOF) ? -1 : n;
+}
+
 static const char *
 battery_perc(const char *bat)
 {
-	int n, perc;
+	int perc;
 	char path[PATH_MAX];
-	FILE *fp;
 
 	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/capacity");
-	fp = fopen(path, "r");
-	if (fp == NULL) {
-		warn("Failed to open file %s", path);
-		return unknown_str;
-	}
-	n = fscanf(fp, "%i", &perc);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
-
-	return bprintf("%d", perc);
+	return (pscanf(path, "%i", &perc) == 1) ?
+	       bprintf("%d", perc) : unknown_str;
 }
 
 static const char *
 battery_power(const char *bat)
 {
+	int watts;
 	char path[PATH_MAX];
-	FILE *fp;
-	int n, watts;
 
 	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/power_now");
-	fp = fopen(path, "r");
-	if (fp == NULL) {
-		warn("Failed to open file %s", path);
-		return unknown_str;
-	}
-	n = fscanf(fp, "%i", &watts);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
-
-	return bprintf("%d", (watts + 500000) / 1000000);
+	return (pscanf(path, "%i", &watts) == 1) ?
+	       bprintf("%d", (watts + 500000) / 1000000) : unknown_str;
 }
 
 static const char *
 battery_state(const char *bat)
 {
-	FILE *fp;
 	struct {
 		char *state;
 		char *symbol;
@@ -149,81 +148,55 @@ battery_state(const char *bat)
 		{ "Unknown",     "/" },
 	};
 	size_t i;
-	int n;
 	char path[PATH_MAX], state[12];
 
 	snprintf(path, sizeof(path), "%s%s%s", "/sys/class/power_supply/", bat, "/status");
-	fp = fopen(path, "r");
-	if (fp == NULL) {
-		warn("Failed to open file %s", path);
+	if (pscanf(path, "%12s", state) != 1) {
 		return unknown_str;
 	}
-	n = fscanf(fp, "%12s", state);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
 
 	for (i = 0; i < LEN(map); i++) {
 		if (!strcmp(map[i].state, state)) {
 			break;
 		}
 	}
-
 	return (i == LEN(map)) ? "?" : map[i].symbol;
 }
 
 static const char *
 cpu_freq(void)
 {
-	int n, freq;
-	FILE *fp;
+	int freq;
 
-	fp = fopen("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
-		return unknown_str;
-	}
-	n = fscanf(fp, "%i", &freq);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
-
-	return bprintf("%d", (freq + 500) / 1000);
+	return (pscanf("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
+	               "%i", &freq) != 1) ?
+	       bprintf("%d", (freq + 500) / 1000) : unknown_str;
 }
 
 static const char *
 cpu_perc(void)
 {
 	struct timespec delay;
-	int n, perc;
+	int perc;
 	long double a[4], b[4];
-	FILE *fp;
 
-	fp = fopen("/proc/stat", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/stat");
+	if (pscanf("/proc/stat", "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2],
+	           &a[3]) != 4) {
 		return unknown_str;
 	}
-	n = fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2], &a[3]);
-	fclose(fp);
-	if (n != 4)
-		return unknown_str;
 
 	delay.tv_sec = (interval / 2) / 1000;
 	delay.tv_nsec = ((interval / 2) % 1000) * 1000000;
 	nanosleep(&delay, NULL);
 
-	fp = fopen("/proc/stat", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/stat");
+	if (pscanf("/proc/stat", "%*s %Lf %Lf %Lf %Lf", &b[0], &b[1], &b[2],
+	           &b[3]) != 4) {
 		return unknown_str;
 	}
-	n = fscanf(fp, "%*s %Lf %Lf %Lf %Lf", &b[0], &b[1], &b[2], &b[3]);
-	fclose(fp);
-	if (n != 4)
-		return unknown_str;
 
-	perc = 100 * ((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) / ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3]));
+	perc = 100 * ((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) /
+	       ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3]));
+
 	return bprintf("%d", perc);
 }
 
@@ -297,20 +270,10 @@ disk_used(const char *mnt)
 static const char *
 entropy(void)
 {
-	int n, num;
-	FILE *fp;
+	int num;
 
-	fp= fopen("/proc/sys/kernel/random/entropy_avail", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/sys/kernel/random/entropy_avail");
-		return unknown_str;
-	}
-	n = fscanf(fp, "%d", &num);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
-
-	return bprintf("%d", num);
+        return (pscanf("/proc/sys/kernel/random/entropy_avail", "%d", &num) == 1) ?
+	               bprintf("%d", num) : unknown_str;
 }
 
 static const char *
@@ -438,92 +401,48 @@ static const char *
 ram_free(void)
 {
 	long free;
-	FILE *fp;
-	int n;
 
-	fp = fopen("/proc/meminfo", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/meminfo");
-		return unknown_str;
-	}
-	n = fscanf(fp, "MemFree: %ld kB\n", &free);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
-
-	return bprintf("%f", (float)free / 1024 / 1024);
+	return (pscanf("/proc/meminfo", "MemFree: %ld kB\n", &free) == 1) ?
+	       bprintf("%f", (float)free / 1024 / 1024) : unknown_str;
 }
 
 static const char *
 ram_perc(void)
 {
 	long total, free, buffers, cached;
-	FILE *fp;
 
-	fp = fopen("/proc/meminfo", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/meminfo");
-		return unknown_str;
-	}
-	if (fscanf(fp, "MemTotal: %ld kB\n", &total) != 1 ||
-	    fscanf(fp, "MemFree: %ld kB\n", &free) != 1 ||
-	    fscanf(fp, "MemAvailable: %ld kB\nBuffers: %ld kB\n",
-	           &buffers, &buffers) != 2 ||
-	    fscanf(fp, "Cached: %ld kB\n", &cached) != 1)
-		goto scanerr;
-	fclose(fp);
-
-	return bprintf("%d", 100 * ((total - free) - (buffers + cached)) / total);
-
-scanerr:
-	fclose(fp);
-	return unknown_str;
+	return (pscanf("/proc/meminfo",
+	               "MemTotal: %ld kB\n"
+	               "MemFree: %ld kB\n"
+	               "MemAvailable: %ld kB\nBuffers: %ld kB\n"
+	               "Cached: %ld kB\n",
+	               &total, &free, &buffers, &buffers, &cached) == 5) ?
+	       bprintf("%d", 100 * ((total - free) - (buffers + cached)) / total) :
+	       unknown_str;
 }
 
 static const char *
 ram_total(void)
 {
 	long total;
-	FILE *fp;
-	int n;
 
-	fp = fopen("/proc/meminfo", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/meminfo");
-		return unknown_str;
-	}
-	n = fscanf(fp, "MemTotal: %ld kB\n", &total);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
-
-	return bprintf("%f", (float)total / 1024 / 1024);
+	return (pscanf("/proc/meminfo", "MemTotal: %ld kB\n", &total) == 1) ?
+	       bprintf("%f", (float)total / 1024 / 1024) : unknown_str;
 }
 
 static const char *
 ram_used(void)
 {
-	long free, total, buffers, cached;
-	FILE *fp;
+	long total, free, buffers, cached;
 
-	fp = fopen("/proc/meminfo", "r");
-	if (fp == NULL) {
-		warn("Failed to open file /proc/meminfo");
-		return unknown_str;
-	}
-	if (fscanf(fp, "MemTotal: %ld kB\n", &total) != 1 ||
-	    fscanf(fp, "MemFree: %ld kB\n", &free) != 1 ||
-	    fscanf(fp, "MemAvailable: %ld kB\nBuffers: %ld kB\n",
-	           &buffers, &buffers) != 2 ||
-	    fscanf(fp, "Cached: %ld kB\n", &cached) != 1)
-		goto scanerr;
-	fclose(fp);
-
-	return bprintf("%f", (float)(total - free - buffers - cached) / 1024 / 1024);
-
-scanerr:
-	fclose(fp);
-	return unknown_str;
+	return (pscanf("/proc/meminfo",
+	               "MemTotal: %ld kB\n"
+	               "MemFree: %ld kB\n"
+	               "MemAvailable: %ld kB\nBuffers: %ld kB\n"
+	               "Cached: %ld kB\n",
+	               &total, &free, &buffers, &buffers, &cached) == 5) ?
+	       bprintf("%f", (float)(total - free - buffers - cached) / 1024 / 1024) :
+	       unknown_str;
 }
 
 static const char *
@@ -680,20 +599,10 @@ swap_used(void)
 static const char *
 temp(const char *file)
 {
-	int n, temp;
-	FILE *fp;
+	int temp;
 
-	fp = fopen(file, "r");
-	if (fp == NULL) {
-		warn("Failed to open file %s", file);
-		return unknown_str;
-	}
-	n = fscanf(fp, "%d", &temp);
-	fclose(fp);
-	if (n != 1)
-		return unknown_str;
-
-	return bprintf("%d", temp / 1000);
+	return (pscanf(file, "%d", &temp) == 1) ?
+	       bprintf("%d", temp / 1000) : unknown_str;
 }
 
 static const char *
