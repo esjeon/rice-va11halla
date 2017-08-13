@@ -1,5 +1,4 @@
 /* See LICENSE file for copyright and license details. */
-
 #ifndef ARG_H
 #define ARG_H
 
