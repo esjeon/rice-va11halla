@@ -15,7 +15,7 @@ Features
 - Available entropy
 - Username/GID/UID
 - Hostname
-- IP address
+- IP address (IPv4 and IPv6)
 - Kernel version
 - Keyboard indicators
 - Load average

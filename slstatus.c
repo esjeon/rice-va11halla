@@ -48,7 +48,8 @@ static const char *disk_used(const char *mnt);
 static const char *entropy(void);
 static const char *gid(void);
 static const char *hostname(void);
-static const char *ip(const char *iface);
+static const char *ipv4(const char *iface);
+static const char *ipv6(const char *iface);
 static const char *kernel_release(void);
 static const char *keyboard_indicators(void);
 static const char *load_avg(void);
@@ -294,14 +295,14 @@ hostname(void)
 }
 
 static const char *
-ip(const char *iface)
+ipv4(const char *iface)
 {
 	struct ifaddrs *ifaddr, *ifa;
 	int s;
 	char host[NI_MAXHOST];
 
 	if (getifaddrs(&ifaddr) == -1) {
-		warn("Failed to get IP address for interface %s", iface);
+		warn("Failed to get IPv4 address for interface %s", iface);
 		return unknown_str;
 	}
 
@@ -312,7 +313,38 @@ ip(const char *iface)
 		s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
 		if ((strcmp(ifa->ifa_name, iface) == 0) && (ifa->ifa_addr->sa_family == AF_INET)) {
 			if (s != 0) {
-				warnx("Failed to get IP address for interface %s", iface);
+				warnx("Failed to get IPv4 address for interface %s", iface);
+				return unknown_str;
+			}
+			return bprintf("%s", host);
+		}
+	}
+
+	freeifaddrs(ifaddr);
+
+	return unknown_str;
+}
+
+static const char *
+ipv6(const char *iface)
+{
+	struct ifaddrs *ifaddr, *ifa;
+	int s;
+	char host[NI_MAXHOST];
+
+	if (getifaddrs(&ifaddr) == -1) {
+		warn("Failed to get IPv6 address for interface %s", iface);
+		return unknown_str;
+	}
+
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr == NULL) {
+			continue;
+		}
+		s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in6), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+		if ((strcmp(ifa->ifa_name, iface) == 0) && (ifa->ifa_addr->sa_family == AF_INET6)) {
+			if (s != 0) {
+				warnx("Failed to get IPv6 address for interface %s", iface);
 				return unknown_str;
 			}
 			return bprintf("%s", host);
