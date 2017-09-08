@@ -29,7 +29,7 @@ static const char unknown_str[] = "n/a";
  * ipv6                 IPv6 address                    interface name
  * kernel_release       `uname -r`                      NULL
  * keyboard_indicators  caps/num lock indicators        NULL
- * load_avg             load average                    NULL
+ * load_avg             load average                    format string
  * num_files            number of files in a directory  path
  * ram_free             free memory in GB               NULL
  * ram_perc             memory usage in percent         NULL

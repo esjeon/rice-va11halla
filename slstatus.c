@@ -52,7 +52,7 @@ static const char *ipv4(const char *iface);
 static const char *ipv6(const char *iface);
 static const char *kernel_release(void);
 static const char *keyboard_indicators(void);
-static const char *load_avg(void);
+static const char *load_avg(const char *fmt);
 static const char *num_files(const char *dir);
 static const char *ram_free(void);
 static const char *ram_perc(void);
@@ -394,7 +394,7 @@ keyboard_indicators(void)
 }
 
 static const char *
-load_avg(void)
+load_avg(const char *fmt)
 {
 	double avgs[3];
 
@@ -403,7 +403,7 @@ load_avg(void)
 		return unknown_str;
 	}
 
-	return bprintf("%.2f %.2f %.2f", avgs[0], avgs[1], avgs[2]);
+	return bprintf(fmt, avgs[0], avgs[1], avgs[2]);
 }
 
 static const char *
