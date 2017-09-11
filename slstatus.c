@@ -6,6 +6,7 @@
 #include <ifaddrs.h>
 #include <limits.h>
 #include <linux/wireless.h>
+#include <locale.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <signal.h>
@@ -841,6 +842,7 @@ main(int argc, char *argv[])
 		usage();
 	}
 
+	setlocale(LC_ALL, "");
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = terminate;
 	sigaction(SIGINT,  &act, NULL);
