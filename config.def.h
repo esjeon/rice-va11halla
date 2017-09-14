@@ -16,6 +16,7 @@ static const char unknown_str[] = "n/a";
  * battery_power        battery power usage             battery name
  * battery_state        battery charging state          battery name
  * cpu_perc             cpu usage in percent            NULL
+ * cpu_iowait           cpu iowait in percent           NULL
  * cpu_freq             cpu frequency in MHz            NULL
  * datetime             date and time                   format string
  * disk_free            free disk space in GB           mountpoint path

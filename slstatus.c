@@ -40,6 +40,7 @@ static const char *battery_power(const char *bat);
 static const char *battery_state(const char *bat);
 static const char *cpu_freq(void);
 static const char *cpu_perc(void);
+static const char *cpu_iowait(void);
 static const char *datetime(const char *fmt);
 static const char *disk_free(const char *mnt);
 static const char *disk_perc(const char *mnt);
@@ -177,26 +178,47 @@ cpu_freq(void)
 static const char *
 cpu_perc(void)
 {
-	struct timespec delay;
 	int perc;
-	long double a[4], b[4];
+	static long double a[7];
+	static int valid;
+	long double b[7];
 
-	if (pscanf("/proc/stat", "%*s %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2],
-	           &a[3]) != 4) {
+	memcpy(b, a, sizeof(b));
+	if (pscanf("/proc/stat", "%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2],
+	           &a[3], &a[4], &a[5], &a[6]) != 7) {
+		return unknown_str;
+	}
+	if (!valid) {
+		valid = 1;
 		return unknown_str;
 	}
 
-	delay.tv_sec = (interval / 2) / 1000;
-	delay.tv_nsec = ((interval / 2) % 1000) * 1000000;
-	nanosleep(&delay, NULL);
+	perc = 100 * ((b[0]+b[1]+b[2]+b[5]+b[6]) - (a[0]+a[1]+a[2]+a[5]+a[6])) /
+	       ((b[0]+b[1]+b[2]+b[3]+b[4]+b[5]+b[6]) - (a[0]+a[1]+a[2]+a[3]+a[4]+a[5]+a[6]));
 
-	if (pscanf("/proc/stat", "%*s %Lf %Lf %Lf %Lf", &b[0], &b[1], &b[2],
-	           &b[3]) != 4) {
+	return bprintf("%d", perc);
+}
+
+static const char *
+cpu_iowait(void)
+{
+	int perc;
+	static int valid;
+	static long double a[7];
+	long double b[7];
+
+	memcpy(b, a, sizeof(b));
+	if (pscanf("/proc/stat", "%*s %Lf %Lf %Lf %Lf %Lf %Lf %Lf", &a[0], &a[1], &a[2],
+	           &a[3], &a[4], &a[5], &a[6]) != 7) {
+		return unknown_str;
+	}
+	if (!valid) {
+		valid = 1;
 		return unknown_str;
 	}
 
-	perc = 100 * ((b[0]+b[1]+b[2]) - (a[0]+a[1]+a[2])) /
-	       ((b[0]+b[1]+b[2]+b[3]) - (a[0]+a[1]+a[2]+a[3]));
+	perc = 100 * ((b[4]) - (a[4])) /
+	       ((b[0]+b[1]+b[2]+b[3]+b[4]+b[5]+b[6]) - (a[0]+a[1]+a[2]+a[3]+a[4]+a[5]+a[6]));
 
 	return bprintf("%d", perc);
 }
