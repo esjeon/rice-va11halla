@@ -9,6 +9,7 @@ Features
 - Battery percentage/power/state
 - CPU usage
 - CPU frequency
+- CPU iowait
 - Custom shell commands
 - Date and time
 - Disk status (free storage, percentage, total storage and used storage)
