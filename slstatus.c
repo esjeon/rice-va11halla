@@ -843,6 +843,7 @@ main(int argc, char *argv[])
 	}
 
 	setlocale(LC_ALL, "");
+
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = terminate;
 	sigaction(SIGINT,  &act, NULL);
