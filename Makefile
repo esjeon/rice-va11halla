@@ -31,26 +31,7 @@ all: slstatus
 
 slstatus: slstatus.o $(COM:=.o) $(REQ:=.o)
 slstatus.o: slstatus.c slstatus.h $(HDR) $(REQ:=.h)
-
-battery.o: battery.c config.mk $(HDR) $(REQ:=.h)
-cpu.o: cpu.c config.mk $(HDR) $(REQ:=.h)
-datetime.o: datetime.c config.mk $(HDR) $(REQ:=.h)
-disk.o: disk.c config.mk $(HDR) $(REQ:=.h)
-entropy.o: entropy.c config.mk $(HDR) $(REQ:=.h)
-hostname.o: hostname.c config.mk $(HDR) $(REQ:=.h)
-ip.o: ip.c config.mk $(HDR) $(REQ:=.h)
-kernel_release.o: kernel_release.c config.mk $(HDR) $(REQ:=.h)
-keyboard_indicators.o: keyboard_indicators.c config.mk $(HDR) $(REQ:=.h)
-load_avg.o: load_avg.c config.mk $(HDR) $(REQ:=.h)
-num_files.o: num_files.c config.mk $(HDR) $(REQ:=.h)
-ram.o: ram.c config.mk $(HDR) $(REQ:=.h)
-run_command.o: run_command.c config.mk $(HDR) $(REQ:=.h)
-swap.o: swap.c config.mk $(HDR) $(REQ:=.h)
-temperature.o: temperature.c config.mk $(HDR) $(REQ:=.h)
-uptime.o: uptime.c config.mk $(HDR) $(REQ:=.h)
-user.o: user.c config.mk $(HDR) $(REQ:=.h)
-volume.o: volume.c config.mk $(HDR) $(REQ:=.h)
-wifi.o: wifi.c config.mk $(HDR) $(REQ:=.h)
+$(COM:=.o): config.mk $(HDR) $(REQ:=.h)
 
 config.h:
 	cp config.def.h $@
