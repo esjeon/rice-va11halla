@@ -1,3 +1,4 @@
+/* See LICENSE file for copyright and license details. */
 #include <err.h>
 #include <ifaddrs.h>
 #include <linux/wireless.h>

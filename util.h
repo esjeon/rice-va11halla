@@ -1,3 +1,4 @@
+/* See LICENSE file for copyright and license details. */
 extern char buf[1024];
 
 #define LEN(x) (sizeof (x) / sizeof *(x))
