@@ -18,47 +18,11 @@ struct arg {
 	const char *args;
 };
 
-static const char *battery_perc(const char *bat);
-static const char *battery_power(const char *bat);
-static const char *battery_state(const char *bat);
-static const char *cpu_freq(void);
-static const char *cpu_perc(void);
-static const char *cpu_iowait(void);
-static const char *datetime(const char *fmt);
-static const char *disk_free(const char *mnt);
-static const char *disk_perc(const char *mnt);
-static const char *disk_total(const char *mnt);
-static const char *disk_used(const char *mnt);
-static const char *entropy(void);
-static const char *gid(void);
-static const char *hostname(void);
-static const char *ipv4(const char *iface);
-static const char *ipv6(const char *iface);
-static const char *kernel_release(void);
-static const char *keyboard_indicators(void);
-static const char *load_avg(const char *fmt);
-static const char *num_files(const char *dir);
-static const char *ram_free(void);
-static const char *ram_perc(void);
-static const char *ram_used(void);
-static const char *ram_total(void);
-static const char *run_command(const char *cmd);
-static const char *swap_free(void);
-static const char *swap_perc(void);
-static const char *swap_used(void);
-static const char *swap_total(void);
-static const char *temp(const char *file);
-static const char *uid(void);
-static const char *uptime(void);
-static const char *username(void);
-static const char *vol_perc(const char *card);
-static const char *wifi_perc(const char *iface);
-static const char *wifi_essid(const char *iface);
-
 char *argv0;
 static unsigned short int done;
 static Display *dpy;
 
+#include "slstatus.h"
 #include "config.h"
 
 static void
