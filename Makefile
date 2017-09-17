@@ -5,7 +5,7 @@
 include config.mk
 
 REQ = util
-HDR = arg.h
+HDR = arg.h config.h
 COM =\
 	battery\
 	cpu\
@@ -51,6 +51,9 @@ uptime.o: uptime.c config.mk $(HDR) $(REQ:=.h)
 user.o: user.c config.mk $(HDR) $(REQ:=.h)
 volume.o: volume.c config.mk $(HDR) $(REQ:=.h)
 wifi.o: wifi.c config.mk $(HDR) $(REQ:=.h)
+
+config.h:
+	cp config.def.h $@
 
 .o:
 	$(CC) -o $@ $(LDFLAGS) $< $(COM:=.o) $(REQ:=.o) $(LDLIBS)
