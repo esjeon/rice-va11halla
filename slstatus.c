@@ -10,6 +10,7 @@
 #include <X11/Xlib.h>
 
 #include "arg.h"
+#include "slstatus.h"
 #include "util.h"
 
 struct arg {
@@ -19,15 +20,17 @@ struct arg {
 };
 
 char *argv0;
+char buf[1024];
 static unsigned short int done;
 static Display *dpy;
 
-#include "slstatus.h"
 #include "config.h"
 
 static void
 terminate(const int signo)
 {
+	(void)signo;
+
 	done = 1;
 }
 

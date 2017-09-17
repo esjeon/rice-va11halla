@@ -1,4 +1,4 @@
-static char buf[1024];
+extern char buf[1024];
 
 #define LEN(x) (sizeof (x) / sizeof *(x))
 
