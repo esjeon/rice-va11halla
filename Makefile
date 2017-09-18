@@ -5,7 +5,6 @@
 include config.mk
 
 REQ = util
-HDR = arg.h config.h
 COM =\
 	battery\
 	cpu\
@@ -30,8 +29,8 @@ COM =\
 all: slstatus
 
 slstatus: slstatus.o $(COM:=.o) $(REQ:=.o)
-slstatus.o: slstatus.c slstatus.h $(HDR) $(REQ:=.h)
-$(COM:=.o): config.mk $(HDR) $(REQ:=.h)
+slstatus.o: slstatus.c slstatus.h arg.h config.h $(REQ:=.h)
+$(COM:=.o): config.mk $(REQ:=.h)
 
 config.h:
 	cp config.def.h $@
@@ -49,7 +48,7 @@ dist:
 	rm -rf "slstatus-$(VERSION)"
 	mkdir -p "slstatus-$(VERSION)"
 	cp -R LICENSE Makefile README config.mk config.def.h \
-	      $(HDR) slstatus.c $(COM:=.c) $(REQ:=.c) $(REQ:=.h) \
+	      arg.h slstatus.c $(COM:=.c) $(REQ:=.c) $(REQ:=.h) \
 	      slstatus.1 "slstatus-$(VERSION)"
 	tar -cf - "slstatus-$(VERSION)" | gzip -c > "slstatus-$(VERSION).tar.gz"
 	rm -rf "slstatus-$(VERSION)"
