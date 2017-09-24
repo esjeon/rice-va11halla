@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 cpu_freq(void)

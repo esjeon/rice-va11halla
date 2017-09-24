@@ -9,7 +9,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 wifi_perc(const char *iface)

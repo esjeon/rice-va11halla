@@ -2,7 +2,7 @@
 #include <sys/utsname.h>
 #include <stdio.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 kernel_release(void)

@@ -2,7 +2,7 @@
 #include <err.h>
 #include <stdlib.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 load_avg(const char *fmt)

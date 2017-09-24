@@ -2,7 +2,7 @@
 #include <err.h>
 #include <X11/Xlib.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 keyboard_indicators(void)

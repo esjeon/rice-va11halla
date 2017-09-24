@@ -6,25 +6,25 @@ include config.mk
 
 REQ = util
 COM =\
-	battery\
-	cpu\
-	datetime\
-	disk\
-	entropy\
-	hostname\
-	ip\
-	kernel_release\
-	keyboard_indicators\
-	load_avg\
-	num_files\
-	ram\
-	run_command\
-	swap\
-	temperature\
-	uptime\
-	user\
-	volume\
-	wifi
+	components/battery\
+	components/cpu\
+	components/datetime\
+	components/disk\
+	components/entropy\
+	components/hostname\
+	components/ip\
+	components/kernel_release\
+	components/keyboard_indicators\
+	components/load_avg\
+	components/num_files\
+	components/ram\
+	components/run_command\
+	components/swap\
+	components/temperature\
+	components/uptime\
+	components/user\
+	components/volume\
+	components/wifi
 
 all: slstatus
 
@@ -39,14 +39,14 @@ config.h:
 	$(CC) -o $@ $(LDFLAGS) $< $(COM:=.o) $(REQ:=.o) $(LDLIBS)
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $<
+	$(CC) -o $@ -c $(CPPFLAGS) $(CFLAGS) $<
 
 clean:
 	rm -f slstatus slstatus.o $(COM:=.o) $(REQ:=.o)
 
 dist:
 	rm -rf "slstatus-$(VERSION)"
-	mkdir -p "slstatus-$(VERSION)"
+	mkdir -p "slstatus-$(VERSION)/components"
 	cp -R LICENSE Makefile README config.mk config.def.h \
 	      arg.h slstatus.c $(COM:=.c) $(REQ:=.c) $(REQ:=.h) \
 	      slstatus.1 "slstatus-$(VERSION)"

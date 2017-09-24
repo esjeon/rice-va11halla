@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 battery_perc(const char *bat)

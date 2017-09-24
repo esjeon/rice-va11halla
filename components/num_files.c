@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 num_files(const char *dir)

@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 gid(void)

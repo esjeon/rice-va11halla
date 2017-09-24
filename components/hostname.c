@@ -2,7 +2,7 @@
 #include <err.h>
 #include <unistd.h>
 
-#include "util.h"
+#include "../util.h"
 
 const char *
 hostname(void)
