@@ -1,9 +1,9 @@
 # slstatus version
 VERSION = 0
 
-# Customize below to fit your system
+# customize below to fit your system
 
-#paths
+# paths
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
