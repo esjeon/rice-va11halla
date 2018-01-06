@@ -77,6 +77,7 @@ wifi_essid(const char *iface)
 	wreq.u.essid.pointer = id;
 	if (ioctl(sockfd,SIOCGIWESSID, &wreq) == -1) {
 		warn("Failed to get ESSID for interface %s", iface);
+		close(sockfd);
 		return NULL;
 	}
 
