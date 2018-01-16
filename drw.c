@@ -132,7 +132,7 @@ xfont_create(Drw *drw, const char *fontname, FcPattern *fontpattern)
 			return NULL;
 		}
 	} else {
-		die("no font specified.\n");
+		die("no font specified.");
 	}
 
 	font = ecalloc(1, sizeof(Fnt));
@@ -183,27 +183,26 @@ drw_fontset_free(Fnt *font)
 }
 
 void
-drw_clr_create(Drw *drw, XftColor *dest, const char *clrname, unsigned int alpha)
+drw_clr_create(Drw *drw, Clr *dest, const char *clrname, unsigned int alpha)
 {
 	if (!drw || !dest || !clrname)
 		return;
 
 	if (!XftColorAllocName(drw->dpy, drw->visual, drw->cmap, clrname, dest))
-		die("error, cannot allocate color '%s'\n", clrname);
-
+		die("error, cannot allocate color '%s'", clrname);
 	dest->pixel = (dest->pixel & 0x00ffffffU) | (alpha << 24);
 }
 
 /* Wrapper to create color schemes. The caller has to call free(3) on the
  * returned color scheme when done using it. */
-Scm
+Clr *
 drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount, const unsigned int alphas[])
 {
 	size_t i;
-	Scm ret;
+	Clr *ret;
 
 	/* need at least two colors for a scheme */
-	if (!drw || !clrnames || clrcount < 2 || !(ret = ecalloc(clrcount, sizeof(XftColor))))
+	if (!drw || !clrnames || clrcount < 2 || !(ret = ecalloc(clrcount, sizeof(Clr))))
 		return NULL;
 
 	for (i = 0; i < clrcount; i++)
@@ -219,7 +218,7 @@ drw_setfontset(Drw *drw, Fnt *set)
 }
 
 void
-drw_setscheme(Drw *drw, Scm scm)
+drw_setscheme(Drw *drw, Clr *scm)
 {
 	if (drw)
 		drw->scheme = scm;
@@ -332,7 +331,7 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 
 			if (!drw->fonts->pattern) {
 				/* Refer to the comment in xfont_create for more information. */
-				die("the first font in the cache must be loaded from a font string.\n");
+				die("the first font in the cache must be loaded from a font string.");
 			}
 
 			fcpattern = FcPatternDuplicate(drw->fonts->pattern);
