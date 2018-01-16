@@ -18,6 +18,9 @@ static const char *colors[SchemeLast][3]      = {
 	[SchemeSel] =  { col_gray4, col_cyan,  col_cyan  },
 };
 
+/* alpha */
+static const unsigned int alpha_scheme[3] = { 0xff, 0xdd, 0xff };
+
 /* tagging */
 static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
