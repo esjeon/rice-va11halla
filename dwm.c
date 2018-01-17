@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -170,6 +171,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
+static char *getdwmpath(void);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
@@ -193,6 +195,7 @@ static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizemouse(const Arg *arg);
 static void restack(Monitor *m);
+static void restart(const Arg *arg);
 static void run(void);
 static void scan(void);
 static int sendevent(Client *c, Atom proto);
@@ -872,6 +875,45 @@ getatomprop(Client *c, Atom prop)
 	return atom;
 }
 
+char *
+getdwmpath()
+{
+    struct stat s;
+    int r, length, rate = 42;
+    char *path = NULL;
+
+    if (lstat("/proc/self/exe", &s) == -1) {
+        perror("lstat:");
+        return NULL;
+    }
+
+    length = s.st_size + 1 - rate;
+
+    /* I'm doing the do{}while(); trick because Linux (what I'm running) is not
+     * POSIX compilant and so lstat() cannot be trusted on /proc entries */
+    do {
+        length += rate;
+
+        free(path);
+        path = malloc(sizeof(char) * length);
+
+        if (path == NULL) {
+            perror("malloc:");
+            return NULL;
+        }
+
+        r = readlink("/proc/self/exe", path, length);
+        if (r == -1) {
+            perror("readlink:");
+            return NULL;
+        }
+    } while(r >= length);
+
+    path[r] = '\0';
+    return path;
+}
+
+
 int
 getrootptr(int *x, int *y)
 {
@@ -1368,6 +1410,16 @@ restack(Monitor *m)
 	}
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
+}
+
+void
+restart(const Arg *arg)
+{
+    char *const argv[] = { getdwmpath(), NULL };
+    if (argv[0] == NULL)
+        return;
+
+    execv(argv[0], argv);
 }
 
 void
