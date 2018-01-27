@@ -8,6 +8,7 @@ REQ = util
 COM =\
 	components/battery\
 	components/cpu\
+	components/cpucore\
 	components/datetime\
 	components/disk\
 	components/entropy\

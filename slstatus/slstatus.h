@@ -10,6 +10,9 @@ const char *cpu_freq(void);
 const char *cpu_perc(void);
 const char *cpu_iowait(void);
 
+/* cpucore */
+const char *cpucore_perc(void);
+
 /* datetime */
 const char *datetime(const char *);
 
