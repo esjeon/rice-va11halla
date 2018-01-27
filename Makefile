@@ -2,7 +2,7 @@
 PREFIX = $(HOME)/.local/
 CC = gcc
 
-PARTS = dwm dmenu slstatus
+PARTS = dwm dmenu st slstatus
 
 .PHONY: all clean install uninstall $(PARTS)
 
