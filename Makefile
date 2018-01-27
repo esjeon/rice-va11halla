@@ -22,9 +22,12 @@ install:
 	@for part in $(PARTS); do \
 		make -C $$part install PREFIX="$(PREFIX)"; \
 	done
+	@mkdir -p $(PREFIX)/share/backgrounds/
+	@cp -fv background.png $(PREFIX)/share/backgrounds/va11halla-background.png
 	
 uninstall:
 	@for part in $(PARTS); do \
 		make -C $$part uninstall PREFIX="$(PREFIX)"; \
 	done
+	@rm -v $(PREFIX)/share/backgrounds/va11halla-background.png
 
