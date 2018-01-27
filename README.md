@@ -34,14 +34,15 @@ Software (Included)
 
  * status monitor: [slstatus](https://github.com/drkhsh/slstatus)
 
+ * terminal emulator: [st](https://st.suckless.org)
+   - patches applied: [alpha](https://st.suckless.org/patches/alpha/)
+   - custom color for this rice
+
 
 Software (Recommended)
 -------------------
 
  * X compositor: [compton](https://github.com/chjj/compton)
-
- * terminal emulator: [st](https://st.suckless.org)
-   - [alpha patch](https://st.suckless.org/patches/alpha/) makes it translucent.
 
 
 Install
