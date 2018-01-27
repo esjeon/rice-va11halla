@@ -737,6 +737,7 @@ drawstatusbar(Monitor *m, int bh, char* stext) {
 
 	drw_setscheme(drw, scheme[LENGTH(colors)]);
 	drw->scheme[ColFg] = scheme[SchemeNorm][ColFg];
+	drw->scheme[ColBg] = scheme[SchemeNorm][ColBg];
 	drw_rect(drw, x, 0, w, bh, 1, 1);
 	x++;
 
@@ -760,8 +761,15 @@ drawstatusbar(Monitor *m, int bh, char* stext) {
 					buf[7] = '\0';
 					drw_clr_create(drw, &drw->scheme[ColFg], buf);
 					i += 7;
+				} else if (text[i] == 'b') {
+					char buf[8];
+					memcpy(buf, (char*)text+i+1, 7);
+					buf[7] = '\0';
+					drw_clr_create(drw, &drw->scheme[ColBg], buf);
+					i += 7;
 				} else if (text[i] == 'd') {
 					drw->scheme[ColFg] = scheme[SchemeNorm][ColFg];
+					drw->scheme[ColBg] = scheme[SchemeNorm][ColBg];
 				} else if (text[i] == 'r') {
 					int rx = atoi(text + ++i);
 					while (text[++i] != ',');
@@ -774,6 +782,35 @@ drawstatusbar(Monitor *m, int bh, char* stext) {
 					drw_rect(drw, rx + x, ry, rw, rh, 1, 0);
 				} else if (text[i] == 'f') {
 					x += atoi(text + ++i);
+				} else if (text[i] == 'h') {
+					int barw = atoi(text + ++i);
+					while (text[++i] != ',');
+					int val = atoi(text + ++i);
+
+					drw_rect(drw, x, 1, barw, bh - 2, 1, 1);
+
+					int valw = (float)val / 100 * barw;
+					drw_rect(drw, x, 1, valw, bh - 2, 1, 0);
+				} else if (text[i] == 'v') {
+					int barw = atoi(text + ++i);
+					while (text[++i] != ',');
+					int val = atoi(text + ++i);
+
+					drw_rect(drw, x, 1, barw, bh - 2, 1, 1);
+
+					int valh = (float)val / 100 * (bh - 2);
+					drw_rect(drw, x, bh - 2 - valh, barw, valh, 1, 0);
+				} else if (text[i] == 'V') {
+					int barw = atoi(text + ++i);
+					while (text[++i] != ',');
+					int max = atoi(text + ++i);
+					while (text[++i] != ',');
+					int val = atoi(text + ++i);
+
+					drw_rect(drw, x, 1, barw, bh - 2, 1, 1);
+
+					int valh = (float)val / max * (bh - 2);
+					drw_rect(drw, x, bh - 2 - valh, barw, valh, 1, 0);
 				}
 			}
 
