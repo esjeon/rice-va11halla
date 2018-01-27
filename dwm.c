@@ -1014,6 +1014,8 @@ getdwmpath()
     } while(r >= length);
 
     path[r] = '\0';
+    if (strcmp(&path[strlen(path) - strlen(" (deleted)")], " (deleted)") == 0)
+	    path[strlen(path) - strlen(" (deleted)")] = 0;
     return path;
 }
 
