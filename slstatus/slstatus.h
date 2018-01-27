@@ -4,6 +4,7 @@
 const char *battery_perc(const char *);
 const char *battery_power(const char *);
 const char *battery_state(const char *);
+const char *battery_state_fa(const char *);
 
 /* cpu */
 const char *cpu_freq(void);
