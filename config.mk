@@ -11,10 +11,10 @@ X11INC = /usr/X11R6/include
 X11LIB = /usr/X11R6/lib
 
 # includes and libs
-INCS = -I$(X11INC) \
+INCS = -I. -I/usr/include -I${X11INC} \
        `pkg-config --cflags fontconfig` \
        `pkg-config --cflags freetype2`
-LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft \
+LIBS = -L/usr/lib -lc -L${X11LIB} -lm -lrt -lX11 -lutil -lXft -lXrender\
        `pkg-config --libs fontconfig` \
        `pkg-config --libs freetype2`
 

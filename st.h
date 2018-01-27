@@ -251,6 +251,7 @@ extern unsigned int blinktimeout;
 extern char termname[];
 extern const char *colorname[];
 extern size_t colornamelen;
+extern unsigned int alpha;
 extern unsigned int defaultfg;
 extern unsigned int defaultbg;
 extern unsigned int defaultcs;

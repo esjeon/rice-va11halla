@@ -5,6 +5,10 @@
 #define XK_NO_MOD     0
 #define XK_SWITCH_MOD (1<<13)
 
+/* alpha */
+#define OPAQUE 0Xff
+#define USE_ARGB (alpha != OPAQUE && opt_embed == NULL)
+
 typedef XftGlyphFontSpec GlyphFontSpec;
 
 void draw(void);
