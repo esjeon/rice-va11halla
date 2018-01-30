@@ -62,8 +62,8 @@ battery_state_fa(const char *bat)
 		char *state;
 		char *symbol;
 	} map[] = {
-		{ "Charging",    "\xef\x89\x82" },
-		{ "Discharging", "\xef\x83\xa7" },
+		{ "Charging",    "\xef\x83\xa7" },
+		{ "Discharging", "\xef\x89\x82" },
 		{ "Full",        "\xef\x87\xa6" },
 		{ "Unknown",     "\xef\x81\x9e" },
 	};
