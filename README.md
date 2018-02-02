@@ -4,11 +4,11 @@ Eon's VA-11 HALL-A Rice
 
 This is my [VA11 HALL-A][1] themed rice for linux, using [suckless][2] tools. Also, this is a **whole-desktop-in-a-repo**.
 
-![rice shot](/screenshot.png)
-![main screen](/screenshot-empty.png)
-![with terminals](/screenshot-terms.png)
-![with vscode](/screenshot-code.png)
-![with web browser](/screenshot-web.png)
+![rice shot](/screenshot/screenshot.png)
+![main screen](/screenshot/screenshot-empty.png)
+![with terminals](/screenshot/screenshot-terms.png)
+![with vscode](/screenshot/screenshot-code.png)
+![with web browser](/screenshot/screenshot-web.png)
 
 
 Resources
