@@ -3,38 +3,22 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <locale.h>
 #include <pwd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <stdint.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <termios.h>
-#include <time.h>
 #include <unistd.h>
-#include <libgen.h>
-#include <fontconfig/fontconfig.h>
 #include <wchar.h>
 
-/* X11 */
-#include <X11/cursorfont.h>
-#include <X11/Xft/Xft.h>
-
-char *argv0;
-
-#define Glyph Glyph_
-#define Font Font_
-
-#include "win.h"
 #include "st.h"
+#include "win.h"
 
 #if   defined(__linux)
  #include <pty.h>
@@ -46,21 +30,29 @@ char *argv0;
 
 /* Arbitrary sizes */
 #define UTF_INVALID   0xFFFD
+#define UTF_SIZ       4
 #define ESC_BUF_SIZ   (128*UTF_SIZ)
 #define ESC_ARG_SIZ   16
 #define STR_BUF_SIZ   ESC_BUF_SIZ
 #define STR_ARG_SIZ   ESC_ARG_SIZ
 
 /* macros */
-#define NUMMAXLEN(x)		((int)(sizeof(x) * 2.56 + 0.5) + 1)
-#define DEFAULT(a, b)		(a) = (a) ? (a) : (b)
+#define IS_SET(flag)		((term.mode & (flag)) != 0)
 #define ISCONTROLC0(c)		(BETWEEN(c, 0, 0x1f) || (c) == '\177')
 #define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
 #define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
 #define ISDELIM(u)		(utf8strchr(worddelimiters, u) != NULL)
 
-/* constants */
-#define ISO14755CMD		"dmenu -w %lu -p codepoint: </dev/null"
+enum term_mode {
+	MODE_WRAP        = 1 << 0,
+	MODE_INSERT      = 1 << 1,
+	MODE_ALTSCREEN   = 1 << 2,
+	MODE_CRLF        = 1 << 3,
+	MODE_ECHO        = 1 << 4,
+	MODE_PRINT       = 1 << 5,
+	MODE_UTF8        = 1 << 6,
+	MODE_SIXEL       = 1 << 7,
+};
 
 enum cursor_movement {
 	CURSOR_SAVE,
@@ -94,6 +86,51 @@ enum escape_state {
 	ESC_DCS        =128,
 };
 
+typedef struct {
+	Glyph attr; /* current char attributes */
+	int x;
+	int y;
+	char state;
+} TCursor;
+
+typedef struct {
+	int mode;
+	int type;
+	int snap;
+	/*
+	 * Selection variables:
+	 * nb – normalized coordinates of the beginning of the selection
+	 * ne – normalized coordinates of the end of the selection
+	 * ob – original coordinates of the beginning of the selection
+	 * oe – original coordinates of the end of the selection
+	 */
+	struct {
+		int x, y;
+	} nb, ne, ob, oe;
+
+	int alt;
+} Selection;
+
+/* Internal representation of the screen */
+typedef struct {
+	int row;      /* nb row */
+	int col;      /* nb col */
+	Line *line;   /* screen */
+	Line *alt;    /* alternate screen */
+	int *dirty;   /* dirtyness of lines */
+	TCursor c;    /* cursor */
+	int ocx;      /* old cursor col */
+	int ocy;      /* old cursor row */
+	int top;      /* top    scroll limit */
+	int bot;      /* bottom scroll limit */
+	int mode;     /* terminal mode flags */
+	int esc;      /* escape state flags */
+	char trantbl[4]; /* charset table translation */
+	int charset;  /* current charset */
+	int icharset; /* selected charset for sequence */
+	int *tabs;
+} Term;
+
 /* CSI Escape sequence structs */
 /* ESC '[' [[ [<priv>] <arg> [;]] <mode> [<mode>]] */
 typedef struct {
@@ -115,36 +152,10 @@ typedef struct {
 	int narg;              /* nb of args */
 } STREscape;
 
-typedef struct {
-	KeySym k;
-	uint mask;
-	char *s;
-	/* three valued logic variables: 0 indifferent, 1 on, -1 off */
-	signed char appkey;    /* application keypad */
-	signed char appcursor; /* application cursor */
-	signed char crlf;      /* crlf mode          */
-} Key;
-
-/* function definitions used in config.h */
-static void clipcopy(const Arg *);
-static void clippaste(const Arg *);
-static void numlock(const Arg *);
-static void selpaste(const Arg *);
-static void zoom(const Arg *);
-static void zoomabs(const Arg *);
-static void zoomreset(const Arg *);
-static void printsel(const Arg *);
-static void printscreen(const Arg *) ;
-static void iso14755(const Arg *);
-static void toggleprinter(const Arg *);
-static void sendbreak(const Arg *);
-
-/* config.h for applying patches and the configuration. */
-#include "config.h"
-
-static void execsh(void);
-static void stty(void);
+static void execsh(char *, char **);
+static void stty(char **);
 static void sigchld(int);
+static void ttywriteraw(const char *, size_t);
 
 static void csidump(void);
 static void csihandle(void);
@@ -173,16 +184,16 @@ static void tnewline(int);
 static void tputtab(int);
 static void tputc(Rune);
 static void treset(void);
-static void tresize(int, int);
 static void tscrollup(int, int);
 static void tscrolldown(int, int);
 static void tsetattr(int *, int);
 static void tsetchar(Rune, Glyph *, int, int);
+static void tsetdirt(int, int);
 static void tsetscroll(int, int);
 static void tswapscreen(void);
 static void tsetmode(int, int, int *, int);
+static int twrite(const char *, int, int);
 static void tfulldirt(void);
-static void techo(Rune);
 static void tcontrolcode(uchar );
 static void tdectest(char );
 static void tdefutf8(char);
@@ -190,53 +201,36 @@ static int32_t tdefcolor(int *, int *, int);
 static void tdeftran(char);
 static void tstrsequence(uchar);
 
+static void drawregion(int, int, int, int);
+
+static void selnormalize(void);
 static void selscroll(int, int);
 static void selsnap(int *, int *, int);
 
+static size_t utf8decode(const char *, Rune *, size_t);
 static Rune utf8decodebyte(char, size_t *);
 static char utf8encodebyte(Rune, size_t);
-static char *utf8strchr(char *s, Rune u);
+static char *utf8strchr(char *, Rune);
 static size_t utf8validate(Rune *, size_t);
 
 static char *base64dec(const char *);
+static char base64dec_getc(const char **);
 
 static ssize_t xwrite(int, const char *, size_t);
-static void *xrealloc(void *, size_t);
 
 /* Globals */
-TermWindow win;
-Term term;
-Selection sel;
-int cmdfd;
-pid_t pid;
-char **opt_cmd  = NULL;
-char *opt_class = NULL;
-char *opt_embed = NULL;
-char *opt_font  = NULL;
-char *opt_io    = NULL;
-char *opt_line  = NULL;
-char *opt_name  = NULL;
-char *opt_title = NULL;
-int oldbutton   = 3; /* button event on startup: 3 = release */
-
+static Term term;
+static Selection sel;
 static CSIEscape csiescseq;
 static STREscape strescseq;
 static int iofd = 1;
-
-char *usedfont = NULL;
-double usedfontsize = 0;
-double defaultfontsize = 0;
+static int cmdfd;
+static pid_t pid;
 
 static uchar utfbyte[UTF_SIZ + 1] = {0x80,    0, 0xC0, 0xE0, 0xF0};
 static uchar utfmask[UTF_SIZ + 1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
 static Rune utfmin[UTF_SIZ + 1] = {       0,    0,  0x80,  0x800,  0x10000};
 static Rune utfmax[UTF_SIZ + 1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
-
-/* config.h array lengths */
-size_t colornamelen = LEN(colorname);
-size_t mshortcutslen = LEN(mshortcuts);
-size_t shortcutslen = LEN(shortcuts);
-size_t selmaskslen = LEN(selmasks);
 
 ssize_t
 xwrite(int fd, const char *s, size_t len)
@@ -258,10 +252,10 @@ xwrite(int fd, const char *s, size_t len)
 void *
 xmalloc(size_t len)
 {
-	void *p = malloc(len);
+	void *p;
 
-	if (!p)
-		die("Out of memory\n");
+	if (!(p = malloc(len)))
+		die("malloc: %s\n", strerror(errno));
 
 	return p;
 }
@@ -270,7 +264,7 @@ void *
 xrealloc(void *p, size_t len)
 {
 	if ((p = realloc(p, len)) == NULL)
-		die("Out of memory\n");
+		die("realloc: %s\n", strerror(errno));
 
 	return p;
 }
@@ -279,13 +273,13 @@ char *
 xstrdup(char *s)
 {
 	if ((s = strdup(s)) == NULL)
-		die("Out of memory\n");
+		die("strdup: %s\n", strerror(errno));
 
 	return s;
 }
 
 size_t
-utf8decode(char *c, Rune *u, size_t clen)
+utf8decode(const char *c, Rune *u, size_t clen)
 {
 	size_t i, j, len, type;
 	Rune udecoded;
@@ -423,31 +417,9 @@ base64dec(const char *src)
 void
 selinit(void)
 {
-	clock_gettime(CLOCK_MONOTONIC, &sel.tclick1);
-	clock_gettime(CLOCK_MONOTONIC, &sel.tclick2);
 	sel.mode = SEL_IDLE;
 	sel.snap = 0;
 	sel.ob.x = -1;
-	sel.primary = NULL;
-	sel.clipboard = NULL;
-}
-
-int
-x2col(int x)
-{
-	x -= borderpx;
-	x /= win.cw;
-
-	return LIMIT(x, 0, term.col-1);
-}
-
-int
-y2row(int y)
-{
-	y -= borderpx;
-	y /= win.ch;
-
-	return LIMIT(y, 0, term.row-1);
 }
 
 int
@@ -462,6 +434,52 @@ tlinelen(int y)
 		--i;
 
 	return i;
+}
+
+void
+selstart(int col, int row, int snap)
+{
+	selclear();
+	sel.mode = SEL_EMPTY;
+	sel.type = SEL_REGULAR;
+	sel.alt = IS_SET(MODE_ALTSCREEN);
+	sel.snap = snap;
+	sel.oe.x = sel.ob.x = col;
+	sel.oe.y = sel.ob.y = row;
+	selnormalize();
+
+	if (sel.snap != 0)
+		sel.mode = SEL_READY;
+	tsetdirt(sel.nb.y, sel.ne.y);
+}
+
+void
+selextend(int col, int row, int type, int done)
+{
+	int oldey, oldex, oldsby, oldsey, oldtype;
+
+	if (sel.mode == SEL_IDLE)
+		return;
+	if (done && sel.mode == SEL_EMPTY) {
+		selclear();
+		return;
+	}
+
+	oldey = sel.oe.y;
+	oldex = sel.oe.x;
+	oldsby = sel.nb.y;
+	oldsey = sel.ne.y;
+	oldtype = sel.type;
+
+	sel.oe.x = col;
+	sel.oe.y = row;
+	selnormalize();
+	sel.type = type;
+
+	if (oldey != sel.oe.y || oldex != sel.oe.x || oldtype != sel.type)
+		tsetdirt(MIN(sel.nb.y, oldsby), MAX(sel.ne.y, oldsey));
+
+	sel.mode = done ? SEL_IDLE : SEL_READY;
 }
 
 void
@@ -495,7 +513,8 @@ selnormalize(void)
 int
 selected(int x, int y)
 {
-	if (sel.mode == SEL_EMPTY)
+	if (sel.mode == SEL_EMPTY || sel.ob.x == -1 ||
+			sel.alt != IS_SET(MODE_ALTSCREEN))
 		return 0;
 
 	if (sel.type == SEL_RECTANGULAR)
@@ -635,24 +654,6 @@ getsel(void)
 }
 
 void
-selpaste(const Arg *dummy)
-{
-	xselpaste();
-}
-
-void
-clipcopy(const Arg *dummy)
-{
-	xclipcopy();
-}
-
-void
-clippaste(const Arg *dummy)
-{
-	xclippaste();
-}
-
-void
 selclear(void)
 {
 	if (sel.ob.x == -1)
@@ -674,29 +675,29 @@ die(const char *errstr, ...)
 }
 
 void
-execsh(void)
+execsh(char *cmd, char **args)
 {
-	char **args, *sh, *prog;
+	char *sh, *prog;
 	const struct passwd *pw;
 
 	errno = 0;
 	if ((pw = getpwuid(getuid())) == NULL) {
 		if (errno)
-			die("getpwuid:%s\n", strerror(errno));
+			die("getpwuid: %s\n", strerror(errno));
 		else
 			die("who are you?\n");
 	}
 
 	if ((sh = getenv("SHELL")) == NULL)
-		sh = (pw->pw_shell[0]) ? pw->pw_shell : shell;
+		sh = (pw->pw_shell[0]) ? pw->pw_shell : cmd;
 
-	if (opt_cmd)
-		prog = opt_cmd[0];
+	if (args)
+		prog = args[0];
 	else if (utmp)
 		prog = utmp;
 	else
 		prog = sh;
-	args = (opt_cmd) ? opt_cmd : (char *[]) {prog, NULL};
+	DEFAULT(args, ((char *[]) {prog, NULL}));
 
 	unsetenv("COLUMNS");
 	unsetenv("LINES");
@@ -706,7 +707,6 @@ execsh(void)
 	setenv("SHELL", sh, 1);
 	setenv("HOME", pw->pw_dir, 1);
 	setenv("TERM", termname, 1);
-	xsetenv();
 
 	signal(SIGCHLD, SIG_DFL);
 	signal(SIGHUP, SIG_DFL);
@@ -726,7 +726,7 @@ sigchld(int a)
 	pid_t p;
 
 	if ((p = waitpid(pid, &stat, WNOHANG)) < 0)
-		die("Waiting for pid %hd failed: %s\n", pid, strerror(errno));
+		die("waiting for pid %hd failed: %s\n", pid, strerror(errno));
 
 	if (pid != p)
 		return;
@@ -736,9 +736,8 @@ sigchld(int a)
 	exit(0);
 }
 
-
 void
-stty(void)
+stty(char **args)
 {
 	char cmd[_POSIX_ARG_MAX], **p, *q, *s;
 	size_t n, siz;
@@ -748,7 +747,7 @@ stty(void)
 	memcpy(cmd, stty_args, n);
 	q = cmd + n;
 	siz = sizeof(cmd) - n;
-	for (p = opt_cmd; p && (s = *p); ++p) {
+	for (p = args; p && (s = *p); ++p) {
 		if ((n = strlen(s)) > siz-1)
 			die("stty parameter length too long\n");
 		*q++ = ' ';
@@ -758,40 +757,40 @@ stty(void)
 	}
 	*q = '\0';
 	if (system(cmd) != 0)
-	    perror("Couldn't call stty");
+		perror("Couldn't call stty");
 }
 
-void
-ttynew(void)
+int
+ttynew(char *line, char *cmd, char *out, char **args)
 {
 	int m, s;
-	struct winsize w = {term.row, term.col, 0, 0};
 
-	if (opt_io) {
+	if (out) {
 		term.mode |= MODE_PRINT;
-		iofd = (!strcmp(opt_io, "-")) ?
-			  1 : open(opt_io, O_WRONLY | O_CREAT, 0666);
+		iofd = (!strcmp(out, "-")) ?
+			  1 : open(out, O_WRONLY | O_CREAT, 0666);
 		if (iofd < 0) {
 			fprintf(stderr, "Error opening %s:%s\n",
-				opt_io, strerror(errno));
+				out, strerror(errno));
 		}
 	}
 
-	if (opt_line) {
-		if ((cmdfd = open(opt_line, O_RDWR)) < 0)
-			die("open line failed: %s\n", strerror(errno));
+	if (line) {
+		if ((cmdfd = open(line, O_RDWR)) < 0)
+			die("open line '%s' failed: %s\n",
+			    line, strerror(errno));
 		dup2(cmdfd, 0);
-		stty();
-		return;
+		stty(args);
+		return cmdfd;
 	}
 
 	/* seems to work fine on linux, openbsd and freebsd */
-	if (openpty(&m, &s, NULL, NULL, &w) < 0)
+	if (openpty(&m, &s, NULL, NULL, NULL) < 0)
 		die("openpty failed: %s\n", strerror(errno));
 
 	switch (pid = fork()) {
 	case -1:
-		die("fork failed\n");
+		die("fork failed: %s\n", strerror(errno));
 		break;
 	case 0:
 		close(iofd);
@@ -803,14 +802,23 @@ ttynew(void)
 			die("ioctl TIOCSCTTY failed: %s\n", strerror(errno));
 		close(s);
 		close(m);
-		execsh();
+#ifdef __OpenBSD__
+		if (pledge("stdio getpw proc exec", NULL) == -1)
+			die("pledge\n");
+#endif
+		execsh(cmd, args);
 		break;
 	default:
+#ifdef __OpenBSD__
+		if (pledge("stdio rpath tty proc", NULL) == -1)
+			die("pledge\n");
+#endif
 		close(s);
 		cmdfd = m;
 		signal(SIGCHLD, sigchld);
 		break;
 	}
+	return cmdfd;
 }
 
 size_t
@@ -818,44 +826,53 @@ ttyread(void)
 {
 	static char buf[BUFSIZ];
 	static int buflen = 0;
-	char *ptr;
-	int charsize; /* size of utf8 char in bytes */
-	Rune unicodep;
+	int written;
 	int ret;
 
 	/* append read bytes to unprocessed bytes */
 	if ((ret = read(cmdfd, buf+buflen, LEN(buf)-buflen)) < 0)
-		die("Couldn't read from shell: %s\n", strerror(errno));
-
+		die("couldn't read from shell: %s\n", strerror(errno));
 	buflen += ret;
-	ptr = buf;
 
-	for (;;) {
-		if (IS_SET(MODE_UTF8) && !IS_SET(MODE_SIXEL)) {
-			/* process a complete utf8 char */
-			charsize = utf8decode(ptr, &unicodep, buflen);
-			if (charsize == 0)
-				break;
-			tputc(unicodep);
-			ptr += charsize;
-			buflen -= charsize;
-
-		} else {
-			if (buflen <= 0)
-				break;
-			tputc(*ptr++ & 0xFF);
-			buflen--;
-		}
-	}
+	written = twrite(buf, buflen, 0);
+	buflen -= written;
 	/* keep any uncomplete utf8 char for the next call */
 	if (buflen > 0)
-		memmove(buf, ptr, buflen);
+		memmove(buf, buf + written, buflen);
 
 	return ret;
 }
 
 void
-ttywrite(const char *s, size_t n)
+ttywrite(const char *s, size_t n, int may_echo)
+{
+	const char *next;
+
+	if (may_echo && IS_SET(MODE_ECHO))
+		twrite(s, n, 1);
+
+	if (!IS_SET(MODE_CRLF)) {
+		ttywriteraw(s, n);
+		return;
+	}
+
+	/* This is similar to how the kernel handles ONLCR for ttys */
+	while (n > 0) {
+		if (*s == '\r') {
+			next = s + 1;
+			ttywriteraw("\r\n", 2);
+		} else {
+			next = memchr(s, '\r', n);
+			DEFAULT(next, s + n);
+			ttywriteraw(s, next - s);
+		}
+		n -= next - s;
+		s = next;
+	}
+}
+
+void
+ttywriteraw(const char *s, size_t n)
 {
 	fd_set wfd, rfd;
 	ssize_t r;
@@ -912,42 +929,23 @@ write_error:
 }
 
 void
-ttysend(char *s, size_t n)
-{
-	int len;
-	char *t, *lim;
-	Rune u;
-
-	ttywrite(s, n);
-	if (!IS_SET(MODE_ECHO))
-		return;
-
-	lim = &s[n];
-	for (t = s; t < lim; t += len) {
-		if (IS_SET(MODE_UTF8) && !IS_SET(MODE_SIXEL)) {
-			len = utf8decode(t, &u, n);
-		} else {
-			u = *t & 0xFF;
-			len = 1;
-		}
-		if (len <= 0)
-			break;
-		techo(u);
-		n -= len;
-	}
-}
-
-void
-ttyresize(void)
+ttyresize(int tw, int th)
 {
 	struct winsize w;
 
 	w.ws_row = term.row;
 	w.ws_col = term.col;
-	w.ws_xpixel = win.tw;
-	w.ws_ypixel = win.th;
+	w.ws_xpixel = tw;
+	w.ws_ypixel = th;
 	if (ioctl(cmdfd, TIOCSWINSZ, &w) < 0)
 		fprintf(stderr, "Couldn't set window size: %s\n", strerror(errno));
+}
+
+void
+ttyhangup()
+{
+	/* Send SIGHUP to shell */
+	kill(pid, SIGHUP);
 }
 
 int
@@ -1045,8 +1043,6 @@ tnew(int col, int row)
 {
 	term = (Term){ .c = { .attr = { .fg = defaultfg, .bg = defaultbg } } };
 	tresize(col, row);
-	term.numlock = 1;
-
 	treset();
 }
 
@@ -1456,7 +1452,8 @@ tsetattr(int *attr, int l)
 			} else {
 				fprintf(stderr,
 					"erresc(default): gfx attr %d unknown\n",
-					attr[i]), csidump();
+					attr[i]);
+				csidump();
 			}
 			break;
 		}
@@ -1482,20 +1479,16 @@ tsetscroll(int t, int b)
 void
 tsetmode(int priv, int set, int *args, int narg)
 {
-	int *lim, mode;
-	int alt;
+	int alt, *lim;
 
 	for (lim = args + narg; args < lim; ++args) {
 		if (priv) {
 			switch (*args) {
 			case 1: /* DECCKM -- Cursor key */
-				MODBIT(term.mode, set, MODE_APPCURSOR);
+				xsetmode(set, MODE_APPCURSOR);
 				break;
 			case 5: /* DECSCNM -- Reverse video */
-				mode = term.mode;
-				MODBIT(term.mode, set, MODE_REVERSE);
-				if (mode != term.mode)
-					redraw();
+				xsetmode(set, MODE_REVERSE);
 				break;
 			case 6: /* DECOM -- Origin */
 				MODBIT(term.c.state, set, CURSOR_ORIGIN);
@@ -1515,36 +1508,36 @@ tsetmode(int priv, int set, int *args, int narg)
 			case 12: /* att610 -- Start blinking cursor (IGNORED) */
 				break;
 			case 25: /* DECTCEM -- Text Cursor Enable Mode */
-				MODBIT(term.mode, !set, MODE_HIDE);
+				xsetmode(!set, MODE_HIDE);
 				break;
 			case 9:    /* X10 mouse compatibility mode */
 				xsetpointermotion(0);
-				MODBIT(term.mode, 0, MODE_MOUSE);
-				MODBIT(term.mode, set, MODE_MOUSEX10);
+				xsetmode(0, MODE_MOUSE);
+				xsetmode(set, MODE_MOUSEX10);
 				break;
 			case 1000: /* 1000: report button press */
 				xsetpointermotion(0);
-				MODBIT(term.mode, 0, MODE_MOUSE);
-				MODBIT(term.mode, set, MODE_MOUSEBTN);
+				xsetmode(0, MODE_MOUSE);
+				xsetmode(set, MODE_MOUSEBTN);
 				break;
 			case 1002: /* 1002: report motion on button press */
 				xsetpointermotion(0);
-				MODBIT(term.mode, 0, MODE_MOUSE);
-				MODBIT(term.mode, set, MODE_MOUSEMOTION);
+				xsetmode(0, MODE_MOUSE);
+				xsetmode(set, MODE_MOUSEMOTION);
 				break;
 			case 1003: /* 1003: enable all mouse motions */
 				xsetpointermotion(set);
-				MODBIT(term.mode, 0, MODE_MOUSE);
-				MODBIT(term.mode, set, MODE_MOUSEMANY);
+				xsetmode(0, MODE_MOUSE);
+				xsetmode(set, MODE_MOUSEMANY);
 				break;
 			case 1004: /* 1004: send focus events to tty */
-				MODBIT(term.mode, set, MODE_FOCUS);
+				xsetmode(set, MODE_FOCUS);
 				break;
 			case 1006: /* 1006: extended reporting mode */
-				MODBIT(term.mode, set, MODE_MOUSESGR);
+				xsetmode(set, MODE_MOUSESGR);
 				break;
 			case 1034:
-				MODBIT(term.mode, set, MODE_8BIT);
+				xsetmode(set, MODE_8BIT);
 				break;
 			case 1049: /* swap screen & set/restore cursor as xterm */
 				if (!allowaltscreen)
@@ -1569,7 +1562,7 @@ tsetmode(int priv, int set, int *args, int narg)
 				tcursor((set) ? CURSOR_SAVE : CURSOR_LOAD);
 				break;
 			case 2004: /* 2004: bracketed paste mode */
-				MODBIT(term.mode, set, MODE_BRCKTPASTE);
+				xsetmode(set, MODE_BRCKTPASTE);
 				break;
 			/* Not implemented mouse modes. See comments there. */
 			case 1001: /* mouse highlight mode; can hang the
@@ -1590,8 +1583,8 @@ tsetmode(int priv, int set, int *args, int narg)
 			switch (*args) {
 			case 0:  /* Error (IGNORED) */
 				break;
-			case 2:  /* KAM -- keyboard action */
-				MODBIT(term.mode, set, MODE_KBDLOCK);
+			case 2:
+				xsetmode(set, MODE_KBDLOCK);
 				break;
 			case 4:  /* IRM -- Insertion-replacement */
 				MODBIT(term.mode, set, MODE_INSERT);
@@ -1659,7 +1652,7 @@ csihandle(void)
 		break;
 	case 'c': /* DA -- Device Attributes */
 		if (csiescseq.arg[0] == 0)
-			ttywrite(vtiden, sizeof(vtiden) - 1);
+			ttywrite(vtiden, strlen(vtiden), 0);
 		break;
 	case 'C': /* CUF -- Cursor <n> Forward */
 	case 'a': /* HPR -- Cursor <n> Forward */
@@ -1706,7 +1699,6 @@ csihandle(void)
 		tputtab(csiescseq.arg[0]);
 		break;
 	case 'J': /* ED -- Clear screen */
-		selclear();
 		switch (csiescseq.arg[0]) {
 		case 0: /* below */
 			tclearregion(term.c.x, term.c.y, term.col-1, term.c.y);
@@ -1787,7 +1779,7 @@ csihandle(void)
 		if (csiescseq.arg[0] == 6) {
 			len = snprintf(buf, sizeof(buf),"\033[%i;%iR",
 					term.c.y+1, term.c.x+1);
-			ttywrite(buf, len);
+			ttywrite(buf, len, 0);
 		}
 		break;
 	case 'r': /* DECSTBM -- Set Scrolling Region */
@@ -1809,11 +1801,8 @@ csihandle(void)
 	case ' ':
 		switch (csiescseq.mode[1]) {
 		case 'q': /* DECSCUSR -- Set Cursor Style */
-			DEFAULT(csiescseq.arg[0], 1);
-			if (!BETWEEN(csiescseq.arg[0], 0, 6)) {
+			if (xsetcursor(csiescseq.arg[0]))
 				goto unknown;
-			}
-			win.cursor = csiescseq.arg[0];
 			break;
 		default:
 			goto unknown;
@@ -1877,8 +1866,8 @@ strhandle(void)
 
 				dec = base64dec(strescseq.args[2]);
 				if (dec) {
-					xsetsel(dec, CurrentTime);
-					clipcopy(NULL);
+					xsetsel(dec);
+					xclipcopy();
 				} else {
 					fprintf(stderr, "erresc: invalid base64\n");
 				}
@@ -1983,36 +1972,10 @@ void
 tprinter(char *s, size_t len)
 {
 	if (iofd != -1 && xwrite(iofd, s, len) < 0) {
-		fprintf(stderr, "Error writing in %s:%s\n",
-			opt_io, strerror(errno));
+		perror("Error writing to output file");
 		close(iofd);
 		iofd = -1;
 	}
-}
-
-void
-iso14755(const Arg *arg)
-{
-	unsigned long id = xwinid();
-	char cmd[sizeof(ISO14755CMD) + NUMMAXLEN(id)];
-	FILE *p;
-	char *us, *e, codepoint[9], uc[UTF_SIZ];
-	unsigned long utf32;
-
-	snprintf(cmd, sizeof(cmd), ISO14755CMD, id);
-	if (!(p = popen(cmd, "r")))
-		return;
-
-	us = fgets(codepoint, sizeof(codepoint), p);
-	pclose(p);
-
-	if (!us || *us == '\0' || *us == '-' || strlen(us) > 7)
-		return;
-	if ((utf32 = strtoul(us, &e, 16)) == ULONG_MAX ||
-	    (*e != '\n' && *e != '\0'))
-		return;
-
-	ttysend(uc, utf8encode(utf32, uc));
 }
 
 void
@@ -2083,22 +2046,6 @@ tputtab(int n)
 				/* nothing */ ;
 	}
 	term.c.x = LIMIT(x, 0, term.col-1);
-}
-
-void
-techo(Rune u)
-{
-	if (ISCONTROL(u)) { /* control code */
-		if (u & 0x80) {
-			u &= 0x7f;
-			tputc('^');
-			tputc('[');
-		} else if (u != '\n' && u != '\r' && u != '\t') {
-			u ^= 0x40;
-			tputc('^');
-		}
-	}
-	tputc(u);
 }
 
 void
@@ -2185,10 +2132,7 @@ tcontrolcode(uchar ascii)
 			/* backwards compatibility to xterm */
 			strhandle();
 		} else {
-			if (!(win.state & WIN_FOCUSED))
-				xseturgency(1);
-			if (bellvolume)
-				xbell(bellvolume);
+			xbell();
 		}
 		break;
 	case '\033': /* ESC */
@@ -2244,7 +2188,7 @@ tcontrolcode(uchar ascii)
 	case 0x99:   /* TODO: SGCI */
 		break;
 	case 0x9a:   /* DECID -- Identify Terminal */
-		ttywrite(vtiden, sizeof(vtiden) - 1);
+		ttywrite(vtiden, strlen(vtiden), 0);
 		break;
 	case 0x9b:   /* TODO: CSI */
 	case 0x9c:   /* TODO: ST */
@@ -2316,7 +2260,7 @@ eschandle(uchar ascii)
 		}
 		break;
 	case 'Z': /* DECID -- Identify Terminal */
-		ttywrite(vtiden, sizeof(vtiden) - 1);
+		ttywrite(vtiden, strlen(vtiden), 0);
 		break;
 	case 'c': /* RIS -- Reset to inital state */
 		treset();
@@ -2324,10 +2268,10 @@ eschandle(uchar ascii)
 		xloadcols();
 		break;
 	case '=': /* DECPAM -- Application keypad */
-		term.mode |= MODE_APPKEYPAD;
+		xsetmode(1, MODE_APPKEYPAD);
 		break;
 	case '>': /* DECPNM -- Normal keypad */
-		term.mode &= ~MODE_APPKEYPAD;
+		xsetmode(0, MODE_APPKEYPAD);
 		break;
 	case '7': /* DECSC -- Save Cursor */
 		tcursor(CURSOR_SAVE);
@@ -2494,6 +2438,38 @@ check_control_code:
 	}
 }
 
+int
+twrite(const char *buf, int buflen, int show_ctrl)
+{
+	int charsize;
+	Rune u;
+	int n;
+
+	for (n = 0; n < buflen; n += charsize) {
+		if (IS_SET(MODE_UTF8) && !IS_SET(MODE_SIXEL)) {
+			/* process a complete utf8 char */
+			charsize = utf8decode(buf + n, &u, buflen - n);
+			if (charsize == 0)
+				break;
+		} else {
+			u = buf[n] & 0xFF;
+			charsize = 1;
+		}
+		if (show_ctrl && ISCONTROL(u)) {
+			if (u & 0x80) {
+				u &= 0x7f;
+				tputc('^');
+				tputc('[');
+			} else if (u != '\n' && u != '\r' && u != '\t') {
+				u ^= 0x40;
+				tputc('^');
+			}
+		}
+		tputc(u);
+	}
+	return n;
+}
+
 void
 tresize(int col, int row)
 {
@@ -2527,9 +2503,6 @@ tresize(int col, int row)
 		free(term.line[i]);
 		free(term.alt[i]);
 	}
-
-	/* resize to new width */
-	term.specbuf = xrealloc(term.specbuf, col * sizeof(GlyphFontSpec));
 
 	/* resize to new height */
 	term.line = xrealloc(term.line, row * sizeof(Line));
@@ -2580,40 +2553,45 @@ tresize(int col, int row)
 }
 
 void
-zoom(const Arg *arg)
+resettitle(void)
 {
-	Arg larg;
-
-	larg.f = usedfontsize + arg->f;
-	zoomabs(&larg);
+	xsettitle(NULL);
 }
 
 void
-zoomabs(const Arg *arg)
+drawregion(int x1, int y1, int x2, int y2)
 {
-	xunloadfonts();
-	xloadfonts(usedfont, arg->f);
-	cresize(0, 0);
-	ttyresize();
-	redraw();
-	xhints();
-}
+	int y;
+	for (y = y1; y < y2; y++) {
+		if (!term.dirty[y])
+			continue;
 
-void
-zoomreset(const Arg *arg)
-{
-	Arg larg;
-
-	if (defaultfontsize > 0) {
-		larg.f = defaultfontsize;
-		zoomabs(&larg);
+		term.dirty[y] = 0;
+		xdrawline(term.line[y], x1, y, x2);
 	}
 }
 
 void
-resettitle(void)
+draw(void)
 {
-	xsettitle(opt_title ? opt_title : "st");
+	int cx = term.c.x;
+
+	if (!xstartdraw())
+		return;
+
+	/* adjust cursor position */
+	LIMIT(term.ocx, 0, term.col-1);
+	LIMIT(term.ocy, 0, term.row-1);
+	if (term.line[term.ocy][term.ocx].mode & ATTR_WDUMMY)
+		term.ocx--;
+	if (term.line[term.c.y][cx].mode & ATTR_WDUMMY)
+		cx--;
+
+	drawregion(0, 0, term.col, term.row);
+	xdrawcursor(cx, term.c.y, term.line[term.c.y][cx],
+			term.ocx, term.ocy, term.line[term.ocy][term.ocx]);
+	term.ocx = cx, term.ocy = term.c.y;
+	xfinishdraw();
 }
 
 void
@@ -2621,86 +2599,4 @@ redraw(void)
 {
 	tfulldirt();
 	draw();
-}
-
-int
-match(uint mask, uint state)
-{
-	return mask == XK_ANY_MOD || mask == (state & ~ignoremod);
-}
-
-void
-numlock(const Arg *dummy)
-{
-	term.numlock ^= 1;
-}
-
-char*
-kmap(KeySym k, uint state)
-{
-	Key *kp;
-	int i;
-
-	/* Check for mapped keys out of X11 function keys. */
-	for (i = 0; i < LEN(mappedkeys); i++) {
-		if (mappedkeys[i] == k)
-			break;
-	}
-	if (i == LEN(mappedkeys)) {
-		if ((k & 0xFFFF) < 0xFD00)
-			return NULL;
-	}
-
-	for (kp = key; kp < key + LEN(key); kp++) {
-		if (kp->k != k)
-			continue;
-
-		if (!match(kp->mask, state))
-			continue;
-
-		if (IS_SET(MODE_APPKEYPAD) ? kp->appkey < 0 : kp->appkey > 0)
-			continue;
-		if (term.numlock && kp->appkey == 2)
-			continue;
-
-		if (IS_SET(MODE_APPCURSOR) ? kp->appcursor < 0 : kp->appcursor > 0)
-			continue;
-
-		if (IS_SET(MODE_CRLF) ? kp->crlf < 0 : kp->crlf > 0)
-			continue;
-
-		return kp->s;
-	}
-
-	return NULL;
-}
-
-void
-cresize(int width, int height)
-{
-	int col, row;
-
-	if (width != 0)
-		win.w = width;
-	if (height != 0)
-		win.h = height;
-
-	col = (win.w - 2 * borderpx) / win.cw;
-	row = (win.h - 2 * borderpx) / win.ch;
-
-	tresize(col, row);
-	xresize(col, row);
-}
-
-void
-usage(void)
-{
-	die("usage: %s [-aiv] [-c class] [-f font] [-g geometry]"
-	    " [-n name] [-o file]\n"
-	    "          [-T title] [-t title] [-w windowid]"
-	    " [[-e] command [args ...]]\n"
-	    "       %s [-aiv] [-c class] [-f font] [-g geometry]"
-	    " [-n name] [-o file]\n"
-	    "          [-T title] [-t title] [-w windowid] -l line"
-	    " [stty_args ...]\n", argv0, argv0);
 }
